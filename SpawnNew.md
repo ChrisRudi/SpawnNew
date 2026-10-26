@@ -1,10 +1,11 @@
-<!-- SpawnNew.md | Version 1.3 | 26.10.2026 -->
+<!-- SpawnNew.md | Version 1.4 | 26.10.2026 -->
 
 # SpawnNew
 
-Konzept und Anforderungen, Version 1.3 vom 26.10.2026.
+Konzept und Anforderungen, Version 1.4 vom 26.10.2026.
 Status: Ausführungsprozess und Katalogauflösung umgesetzt und geprüft;
-Explorer-Erweiterung, mitgelieferte Aktionen und Installation offen.
+Installation mit Menüregistrierung und Aktion 1 umgesetzt;
+Explorer-Erweiterung, zehn mitgelieferte Aktionen und KI-Anbindung offen.
 
 ## 1. Ziel
 
@@ -127,7 +128,7 @@ Ein Aktionsordner wird nur dann als Aktion erkannt, wenn sein Einstiegspunkt vor
 | `plannedSteps` | Für die Zusammenfassung geeignete Schrittbeschreibung |
 | `cleanup` | Optionaler relativer Einstiegspunkt für das Aufräumen nach Teilfehlern |
 
-Die genauen Werte, Vorgaben und Feldtypen stehen in `docs/Dateiliste.md` Abschnitt 8, der Ausführungsvertrag in `docs/Aktionsvertrag.md`, die KI-Anbindung in `docs/KI-Anbindung.md`.
+Die genauen Werte, Vorgaben und Feldtypen stehen in `docs/Dateiliste.md` Abschnitt 8, der Ausführungsvertrag in `docs/Aktionsvertrag.md`. Die KI-Anbindung wird mit Umsetzungsschritt 7 in `docs/KI-Anbindung.md` festgelegt; bis dahin gilt Abschnitt 9.
 
 `requiresAdmin: true` darf nicht allein aus einer Beschreibung zu einer erhöhten Ausführung führen, wenn die Aktion die Rechte nicht tatsächlich benötigt. Die Anwendung zeigt die deklarierte Rechteanforderung vor dem Start an und fordert erhöhte Rechte erst nach ausdrücklicher Bestätigung an.
 
@@ -297,9 +298,9 @@ Eine Möglichkeit zur Quellen- und Endpunktkonfiguration muss ohne eigenständig
 | 7 | KI-Anbindung Stufe 1: lokaler OpenAI-kompatibler Endpunkt, Voraussetzungsprüfung, Aktionen 17 bis 19 | offen |
 | 8 | KI-Anbindung Stufe 2: Webendpunkt mit verschlüsselt gespeichertem Schlüssel | offen |
 | 9 | NTFS-Rechte aus der Vorlage setzen | offen |
-| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | offen |
-| 11 | Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | offen |
-| 12 | Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus, Fehleranzeige | offen |
+| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | 1 von 11 (Ordnerstruktur) |
+| 11 | Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | Installation, Aktualisierung und Deinstallation fertig in der Registrierungsstufe; Konfigurationszugriff offen |
+| 12 | Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus, Fehleranzeige | Katalogausgabe fertig; Registrierung und Bestätigung offen |
 | 13 | Abnahmekriterien auf Windows 10 und 11 mit erreichbaren und nicht erreichbaren Quellen prüfen | offen |
 
 ## 15. Name und Marktlage

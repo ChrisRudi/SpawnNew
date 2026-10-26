@@ -3,7 +3,7 @@
 # Zweck  : Fortschritt der laufenden Aktion anzeigen, Abbruch anfordern und
 #          am Ende Status, Meldung, Fehlerdetails und erstellte Ressourcen
 #          zeigen. Unterscheidet Erfolg, Teilergebnis, Abbruch, Fehler und
-#          unbekannten Zustand nach SpawnNew.md Abschnitt 9.
+#          unbekannten Zustand nach SpawnNew.md Abschnitt 10.
 # Input  : Laufobjekt, Katalogeintrag, gestarteter Prozess.
 # Output : Statusobjekt aus Get-SpawnNewRunStatus.
 # Deps   : Windows PowerShell 5.1, System.Windows.Forms, System.Drawing,

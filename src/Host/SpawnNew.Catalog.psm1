@@ -312,7 +312,7 @@ function Get-SpawnNewDirectoryAction {
     <#
     .SYNOPSIS
     Taestet ein Verzeichnis ab. Erkennt Aktionsordner und Einzelskripte nach
-    docs/Dateiliste.md Abschnitt 10 und steigt nicht in erkannte
+    docs/Dateiliste.md Abschnitt 11 und steigt nicht in erkannte
     Aktionsordner ab.
     #>
     [CmdletBinding()]

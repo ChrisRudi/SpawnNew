@@ -254,7 +254,7 @@ function ConvertTo-SpawnNewCommand {
 function Get-SpawnNewSourceSortOrder {
     <#
     .SYNOPSIS
-    Sortierschluessel der Quellen nach docs/Dateiliste.md Abschnitt 9.
+    Sortierschluessel der Quellen nach docs/Dateiliste.md Abschnitt 10.
     #>
     [CmdletBinding()]
     [OutputType([hashtable[]])]

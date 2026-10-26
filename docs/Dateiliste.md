@@ -1,9 +1,10 @@
-<!-- docs/Dateiliste.md | Version 1.0 | 26.10.2026 -->
+<!-- docs/Dateiliste.md | Version 1.1 | 26.10.2026 -->
 
 # Dateiliste und Festlegungen
 
-Umsetzungsschritt 1 aus `SpawnNew.md` Abschnitt 13. Diese Dateinamen sind
-festgelegt und werden bei Aenderungen beibehalten (Entwicklungsregel 11).
+Umsetzungsschritt 1 aus `SpawnNew.md` Abschnitt 14. Diese Dateinamen sind
+festgelegt und werden bei Aenderungen beibehalten (Entwicklungsregel 2 in
+`SpawnNew.md` Abschnitt 12).
 
 ## 1. Verzeichnisaufbau im Repository
 
@@ -15,8 +16,9 @@ docs/Aktionsvertrag.md                  Ausfuehrungsvertrag der PowerShell-Aktio
 config/spawnnew.settings.default.json   mitgelieferte Standardkonfiguration
 src/Install-SpawnNew.ps1                Installation, Aktualisierung, Deinstallation
 src/Host/                               Ausfuehrungsprozess, Windows PowerShell 5.1
-src/Explorer/                           native Explorer-Erweiterung, C++
-src/Actions/                            die sieben mitgelieferten Aktionen
+src/Explorer/                           native Explorer-Erweiterung, C++, noch nicht angelegt
+src/Actions/                            die elf mitgelieferten Aktionen
+tests/                                  Tests je Baustein, nicht Teil der Installation
 tools/                                  Entwicklungswerkzeuge, nicht Teil der Installation
 ```
 
@@ -33,7 +35,7 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 | `SpawnNew.Form.psm1` | Eingabeformular, Konfliktfrage, Zusammenfassung und Meldungen als WinForms-Fenster |
 | `SpawnNew.Progress.psm1` | Fortschrittsfenster, Abbruchanforderung, Abschlussbericht |
 | `SpawnNew.Runner.psm1` | Laufverzeichnis, Kontextdatei, Argumente, Prozessstart, Fortschritt lesen, Ergebnis und Status |
-| `SpawnNew.Document.psm1` | Erzeugung von Markdown- und `.docx`-Dateien ohne Word-Automatisierung |
+| `SpawnNew.Document.psm1` | Erzeugung von Markdown- und `.docx`-Dateien ohne Word-Automatisierung, geplant |
 | `SpawnNew.Register.psm1` | Registrierungseintraege des Kontextmenues aus dem Katalog bilden, schreiben und entfernen |
 | `SpawnNew.Llm.psm1` | OpenAI-kompatibler Client fuer lokale und Webendpunkte, geplant |
 | `SpawnNew.Secret.psm1` | Geheimnisse benutzer- und rechnergebunden speichern und lesen, geplant |
@@ -56,6 +58,8 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 ## 4. Mitgelieferte Aktionen (`src/Actions/`)
 
 Je Aktion ein Ordner mit `action.json` und `Invoke-SpawnAction.ps1`.
+Vorhanden ist bisher nur `Ordnerstruktur`; die uebrigen Ordner sind
+festgelegt, aber noch nicht angelegt.
 
 | Ordner | Aktions-ID | Nr. in Abschnitt 4 |
 |---|---|---|
@@ -103,6 +107,12 @@ beschreiben.
 | `SpawnNew.Target.Tests.ps1` | Namen, Zielpfade, Konflikte, Voraussetzungen, Zusammenfassung |
 | `SpawnNew.Runner.Tests.ps1` | Kontextdatei, Argumente, Fortschritt, Ergebnis, Status, Aufraeumangebot |
 | `SpawnNew.CatalogCli.Tests.ps1` | die JSON-Ausgabe fuer die Explorer-Erweiterung |
+| `SpawnNew.Register.Tests.ps1` | Registrierungseintraege, Schluesselnamen, Befehlszeile |
+| `SpawnNew.Ordnerstruktur.Tests.ps1` | die mitgelieferte Aktion 1 gegen den Ausfuehrungsvertrag |
+
+Die Tests laufen unter Windows PowerShell 5.1 und unter PowerShell 7.
+Pfade, die in JSON-Texte eingesetzt werden, gehen ueber
+`ConvertTo-SpawnNewJsonText`, weil der Rueckstrich in JSON ein Escape ist.
 
 `SpawnNew.Form.psm1` und `SpawnNew.Progress.psm1` laden WinForms und sind
 darum nur auf Windows ausfuehrbar. Die Regeln dahinter stehen bewusst in
@@ -124,7 +134,7 @@ darum nur auf Windows ausfuehrbar. Die Regeln dahinter stehen bewusst in
 
 Programmdateien und Benutzerdaten liegen getrennt. Ein Update schreibt
 ausschliesslich unter `App`. Deinstallation entfernt `App` und die
-Menuregistrierung; `Actions`, `Cache`, `Logs` und
+Menuregistrierung; `Actions`, `Cache`, `Secrets`, `Logs` und
 `spawnnew.settings.json` bleiben erhalten.
 
 ## 7. Konfigurationsschichten
@@ -291,7 +301,7 @@ schreibt ausschliesslich unter `App` und in die Menuregistrierung.
 
 Windows PowerShell 5.1 liest Dateien ohne BOM in der ANSI-Codepage des
 Systems. Ein BOM macht die Datei unabhaengig von der Codepage eindeutig, was
-`SpawnNew.md` Abschnitt 11 ausdruecklich zulaesst und PSScriptAnalyzer ueber
+`SpawnNew.md` Abschnitt 12 ausdruecklich zulaesst und PSScriptAnalyzer ueber
 `PSUseBOMForUnicodeEncodedFile` auch verlangt. Von Aktionen erzeugte
 Textdateien werden ebenfalls als UTF-8 mit BOM geschrieben.
 

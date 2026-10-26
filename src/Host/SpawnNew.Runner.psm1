@@ -370,7 +370,7 @@ function Get-SpawnNewRunStatus {
     .DESCRIPTION
     Die Ergebnisdatei gilt vor dem Rueckgabewert. Fehlt sie, lautet der Status
     'unknown'; eine Prozessbeendigung wird nie als Erfolg dargestellt.
-    Abschnitt 9 verlangt diese Unterscheidung.
+    SpawnNew.md Abschnitt 10 verlangt diese Unterscheidung.
     #>
     [CmdletBinding()]
     param(
@@ -430,7 +430,7 @@ function Test-SpawnNewCleanupOffer {
     .DESCRIPTION
     Nur bei Teilergebnis, Abbruch, Fehler oder unbekanntem Zustand, nur wenn
     die Aktion ein Aufraeumskript nennt und nur wenn ueberhaupt etwas erstellt
-    wurde. Abschnitt 9 erlaubt kein Aufraeumen ohne diese Voraussetzungen.
+    wurde. SpawnNew.md Abschnitt 10 erlaubt kein Aufraeumen ohne diese Voraussetzungen.
     #>
     [CmdletBinding()]
     [OutputType([bool])]

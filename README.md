@@ -1,4 +1,4 @@
-<!-- README.md | Version 1.2 | 26.10.2026 -->
+<!-- README.md | Version 1.3 | 26.10.2026 -->
 
 # SpawnNew
 
@@ -96,8 +96,8 @@ Aendert nichts.
 | 8. KI-Anbindung Stufe 2, Webendpunkt mit verschluesseltem Schluessel | offen |
 | 9. NTFS-Rechte aus der Vorlage | offen |
 | 10. Elf mitgelieferte Aktionen | 1 von 11 |
-| 11. Installation, Aktualisierung, Deinstallation | fertig in der Registrierungsstufe |
-| 12. Menueeintraege fuer Installation und Aktualisierung | Katalogausgabe fertig, Registrierung offen |
+| 11. Installation, Aktualisierung, Deinstallation | fertig in der Registrierungsstufe; Konfigurationszugriff offen |
+| 12. Menueeintraege fuer Installation und Aktualisierung | Katalogausgabe fertig; Registrierung und Bestaetigung offen |
 | 13. Abnahme auf Windows 10 und 11 | offen |
 
 Die Menueregistrierung laeuft vorerst ueber die Registrierungsdatenbank
@@ -115,7 +115,7 @@ Menueebene unter Windows 11 kommen mit der DLL aus Schritt 2.
 | `config/` | mitgelieferte Standardkonfiguration |
 | `src/Install-SpawnNew.ps1` | Installation, Aktualisierung, Deinstallation |
 | `src/Host/` | Ausfuehrungsprozess, Windows PowerShell 5.1 |
-| `src/Explorer/` | native Explorer-Erweiterung, C++, noch leer |
+| `src/Explorer/` | native Explorer-Erweiterung, C++, noch nicht angelegt |
 | `src/Actions/` | mitgelieferte Aktionen |
 | `tests/` | Tests zu den Bausteinen und zum Ausfuehrungsvertrag |
 | `tools/` | Pruefwerkzeuge, nicht Teil der Installation |
@@ -138,6 +138,14 @@ weil PSScriptAnalyzer das Kompatibilitaetsprofil je Pfad neu laedt.
 
 `Invoke-Test.ps1` endet mit Rueckgabewert 1 bei mindestens einem Fehler.
 `-Filter` grenzt auf einzelne Testfaelle ein, `-Path` auf einzelne Dateien.
+
+Ohne PowerShell 7 laufen Lint und Tests auch direkt unter Windows
+PowerShell 5.1, sofern PSScriptAnalyzer installiert ist:
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Invoke-Lint.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Invoke-Test.ps1
+```
 
 `SpawnNew.Form.psm1` und `SpawnNew.Progress.psm1` laden WinForms und sind nur
 auf Windows ausfuehrbar; `SpawnNew.Register.psm1` schreibt in die

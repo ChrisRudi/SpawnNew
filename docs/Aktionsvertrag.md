@@ -1,4 +1,4 @@
-<!-- docs/Aktionsvertrag.md | Version 1.1 | 26.10.2026 -->
+<!-- docs/Aktionsvertrag.md | Version 1.2 | 26.10.2026 -->
 
 # Ausfuehrungsvertrag der PowerShell-Aktionen
 
@@ -16,7 +16,7 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass
 
 `-ContextFile` ist der einzige Parameter. Alle Eingaben und Pfade stehen in
 der Kontextdatei, nicht in der Befehlszeile. Damit kann kein Eingabewert in
-einen PowerShell-Ausdruck geraten (Entwicklungsregel 11, Abschnitt 7).
+einen PowerShell-Ausdruck geraten (Entwicklungsregel 12, `SpawnNew.md` Abschnitt 7).
 
 Jedes Aktionsskript beginnt mit:
 
@@ -136,7 +136,7 @@ Die Aktion schreibt `resultFile` als letzten Schritt, UTF-8 ohne BOM.
 
 Bei Abweichung zwischen Rueckgabewert und Ergebnisdatei gilt die
 Ergebnisdatei. Fehlt die Ergebnisdatei, meldet der Ausfuehrungsprozess
-`unknown` (Abschnitt 9: "Status unbekannt").
+`unknown` (`SpawnNew.md` Abschnitt 10: "Status unbekannt").
 
 ## 6. Abbruch
 
@@ -155,7 +155,7 @@ Abbruch nicht deklariert hat.
 Endet der Aktionsprozess ohne Ergebnisdatei, meldet der Ausfuehrungsprozess
 `unknown` und nennt die bis dahin aus dem Fortschritt bekannten Ressourcen.
 Eine Prozessbeendigung wird nie als Erfolg oder als gelungenes Zuruecksetzen
-dargestellt (Abschnitt 9).
+dargestellt (`SpawnNew.md` Abschnitt 10).
 
 ## 8. Aufraeumen
 
