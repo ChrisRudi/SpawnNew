@@ -49,8 +49,11 @@ Nach der Installation Rechtsklick in den leeren Bereich eines Ordners, dann
 direkte Anzeige in der ersten Menueebene verlangt `IExplorerCommand` und ist
 noch offen.
 
-Erneutes Ausfuehren wirkt als Aktualisierung. `-Scope AllUsers` installiert
-fuer alle Benutzer und braucht Administratorrechte.
+Erneutes Ausfuehren desselben Einzeilers wirkt als Aktualisierung: die
+Programmdateien unter `App` werden vollstaendig ersetzt, Einstellungen,
+persoenliche Aktionen, Cache und Protokolle bleiben erhalten.
+`-Scope AllUsers` installiert fuer alle Benutzer und braucht
+Administratorrechte; der Einzeiler oben gilt nur fuer `CurrentUser`.
 
 Der Installer darf unter Windows PowerShell 5.1 oder unter PowerShell 7
 laufen. Die Aktionen selbst startet SpawnNew immer mit `powershell.exe`,

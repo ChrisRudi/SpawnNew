@@ -288,6 +288,9 @@ Windows PowerShell 5.1 sonst je nach System eine aeltere Fassung aushandelt.
 Programmverzeichnis, legt die Standardkonfiguration daneben, loest den Katalog
 auf und schreibt daraus die Registrierungseintraege aus Abschnitt 13. Es
 schreibt ausschliesslich unter `App` und in die Menuregistrierung.
+Vor dem Kopieren leert es `App` vollstaendig, damit Dateien und Aktionen,
+die eine neue Fassung nicht mehr enthaelt, nach dem Update nicht liegen
+bleiben und nicht weiter im Menue erscheinen.
 `-Uninstall` entfernt beides und nennt die erhaltenen Benutzerdaten.
 
 ## 15. Encoding

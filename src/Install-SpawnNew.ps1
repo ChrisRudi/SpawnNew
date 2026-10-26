@@ -1,7 +1,8 @@
 ﻿# Install-SpawnNew.ps1
-# Version 1.0 | Installiert, aktualisiert und entfernt SpawnNew.
+# Version 1.1 | Installiert, aktualisiert und entfernt SpawnNew.
 # Zweck  : Programmdateien in das Installationsverzeichnis kopieren und das
-#          Kontextmenue registrieren. Benutzerdaten bleiben unberuehrt.
+#          Kontextmenue registrieren. Ein erneuter Lauf ersetzt die
+#          Programmdateien vollstaendig. Benutzerdaten bleiben unberuehrt.
 # Input  : -Scope CurrentUser oder AllUsers; -Uninstall entfernt.
 # Output : Bericht auf stdout. Rueckgabewert 1 bei fehlenden Rechten oder
 #          fehlenden Quelldateien.
@@ -64,6 +65,15 @@ foreach ($path in @($hostSource, $actionSource, $configSource)) {
         Write-Output ('Quelldatei oder Quellordner fehlt: ' + $path)
         exit 1
     }
+}
+
+# Erst leeren, dann kopieren: Copy-Item ueberschreibt nur, entfernt aber
+# nichts. Eine in der neuen Fassung gestrichene Aktion bliebe sonst liegen
+# und erschiene weiter im Menue. Unter App liegen ausschliesslich
+# Programmdateien; Benutzerdaten liegen eine Ebene hoeher.
+if (Test-Path -LiteralPath $appDirectory) {
+    Remove-Item -LiteralPath $appDirectory -Recurse -Force
+    Write-Output ('Vorherige Programmdateien entfernt: ' + $appDirectory)
 }
 
 $actionTarget = Join-Path $appDirectory 'Actions'
