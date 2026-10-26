@@ -25,7 +25,7 @@ Add-SpawnNewTest 'Katalog nennt Aktionen mit Menuedaten' {
 { "schemaVersion": 1, "id": "spawnnew.gitproject", "title": "Git-Projekt",
   "category": "Entwicklung", "icon": "git.ico", "requiresAdmin": true }
 '@)
-    $catalog = Get-TestCatalog -Work $Work -Json ('{ "schemaVersion": 1, "sources": [ { "name": "Q", "path": "' + $Work + '/q", "order": 100 } ] }')
+    $catalog = Get-TestCatalog -Work $Work -Json ('{ "schemaVersion": 1, "sources": [ { "name": "Q", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/q", "order": 100 } ] }')
     $action  = $catalog.actions[0]
 
     Confirm-SpawnNewValue -Label 'schemaVersion' -Actual $catalog.schemaVersion -Expected 1
@@ -41,7 +41,7 @@ Add-SpawnNewTest 'Katalog nennt Aktionen mit Menuedaten' {
 
 Add-SpawnNewTest 'Neue Aktion erscheint ohne Neubau im naechsten Katalog' {
     $Work = Get-SpawnNewTestDirectory
-    $layerJson = '{ "schemaVersion": 1, "sources": [ { "name": "Q", "path": "' + $Work + '/q", "order": 100 } ] }'
+    $layerJson = '{ "schemaVersion": 1, "sources": [ { "name": "Q", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/q", "order": 100 } ] }'
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'q/Eins') -Json '{ "schemaVersion": 1, "id": "spawnnew.eins" }')
 
     Confirm-SpawnNewValue -Label 'vorher' -Actual @((Get-TestCatalog -Work $Work -Json $layerJson).actions).Count -Expected 1
@@ -73,8 +73,8 @@ Add-SpawnNewTest 'Fehlerhafte Quelle erscheint als Diagnose, der Katalog bleibt 
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'q/Heil') -Json '{ "schemaVersion": 1, "id": "spawnnew.heil" }')
     $catalog = Get-TestCatalog -Work $Work -Json (
         '{ "schemaVersion": 1, "sources": [ ' +
-        '{ "name": "Weg", "path": "' + $Work + '/weg", "order": 100 },' +
-        '{ "name": "Q",   "path": "' + $Work + '/q",   "order": 900 } ] }')
+        '{ "name": "Weg", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/weg", "order": 100 },' +
+        '{ "name": "Q",   "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/q",   "order": 900 } ] }')
 
     Confirm-SpawnNewValue -Label 'Aktionen' -Actual @($catalog.actions).Count -Expected 1
     Confirm-SpawnNewMatch -Label 'Diagnose' -Actual @($catalog.diagnostics)[0].message -Pattern 'nicht erreichbar'
@@ -87,7 +87,7 @@ Add-SpawnNewTest 'Das Erzeugen des Katalogs fuehrt kein Aktionsskript aus' {
     [void](Add-SpawnNewTestFile -Path (Join-Path $directory 'action.json') -Content '{ "schemaVersion": 1, "id": "spawnnew.boese" }')
     [void](Add-SpawnNewTestFile -Path (Join-Path $directory 'Invoke-SpawnAction.ps1') -Content ("param([string]`$ContextFile)`r`nSet-Content -LiteralPath '" + $spur + "' -Value 'gelaufen'`r`n"))
 
-    $catalog = Get-TestCatalog -Work $Work -Json ('{ "schemaVersion": 1, "sources": [ { "name": "Q", "path": "' + $Work + '/q", "order": 100 } ] }')
+    $catalog = Get-TestCatalog -Work $Work -Json ('{ "schemaVersion": 1, "sources": [ { "name": "Q", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/q", "order": 100 } ] }')
 
     Confirm-SpawnNewValue -Label 'Aktion gefunden' -Actual @($catalog.actions).Count -Expected 1
     Confirm-SpawnNewValue -Label 'Skript nicht gelaufen' -Actual (Test-Path -LiteralPath $spur) -Expected $false

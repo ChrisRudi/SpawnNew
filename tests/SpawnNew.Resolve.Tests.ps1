@@ -27,8 +27,8 @@ Add-SpawnNewTest 'Persoenliche Quelle verdeckt die gemeinsame bei gleicher expli
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 's/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject", "title": "Gemeinsam" }')
 
     $config = Get-ResolveFixture -Work $Work -Sources (
-        '{ "name": "P", "path": "' + ($Work -replace '\\', '\\') + '/p", "scope": "personal", "order": 100 },' +
-        '{ "name": "S", "path": "' + ($Work -replace '\\', '\\') + '/s", "scope": "shared",   "order": 900 }')
+        '{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "scope": "personal", "order": 100 },' +
+        '{ "name": "S", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/s", "scope": "shared",   "order": 900 }')
     $catalog = Get-SpawnNewCatalog -Config $config
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $catalog.Actions.Count -Expected 1
@@ -43,7 +43,7 @@ Add-SpawnNewTest 'Verschiedene IDs mit gleichem Titel bleiben getrennte Aktionen
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Eins') -Json '{ "schemaVersion": 1, "id": "spawnnew.eins", "title": "Sitzung" }')
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Zwei') -Json '{ "schemaVersion": 1, "id": "spawnnew.zwei", "title": "Sitzung" }')
 
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $catalog.Actions.Count -Expected 2
@@ -52,7 +52,7 @@ Add-SpawnNewTest 'Verschiedene IDs mit gleichem Titel bleiben getrennte Aktionen
 Add-SpawnNewTest 'Erreichbare Quelle schreibt den Metadaten-Cache' {
     $Work = Get-SpawnNewTestDirectory
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }')
-    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     [void](Get-SpawnNewCatalog -Config $config)
 
     $cache = Get-SpawnNewCacheFilePath -Source $config.Sources[0]
@@ -63,12 +63,12 @@ Add-SpawnNewTest 'Nicht erreichbare Quelle liefert die Aktionen aus dem Cache al
     $Work = Get-SpawnNewTestDirectory
     $source = Join-Path $Work 'p'
     [void](Add-SpawnNewTestAction -Directory (Join-Path $source 'Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject", "title": "Aus dem Cache" }')
-    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $source + '", "order": 100 }')
+    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $source) + '", "order": 100 }')
 
     [void](Get-SpawnNewCatalog -Config $config)
     Remove-Item -LiteralPath $source -Recurse -Force
 
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $source + '", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $source) + '", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $catalog.Actions.Count -Expected 1
@@ -79,11 +79,32 @@ Add-SpawnNewTest 'Nicht erreichbare Quelle liefert die Aktionen aus dem Cache al
 Add-SpawnNewTest 'Zeitlimit greift und faellt auf den Cache zurueck' {
     $Work = Get-SpawnNewTestDirectory
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject", "title": "Vom Datentraeger" }')
-    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     [void](Get-SpawnNewCatalog -Config $config)
 
-    $config.SourceTimeoutMs = 1
-    $catalog = Get-SpawnNewCatalog -Config $config
+    # Eine kleine lokale Quelle ist schneller als jedes kurze Zeitlimit. Damit
+    # der Fall nicht vom Zufall abhaengt, tastet ein Ersatzmodul die Quelle ab,
+    # das haengt wie eine nicht erreichbare Freigabe. Zeitlimit und
+    # Rueckfall auf den Cache laufen dabei unveraendert.
+    $slow = Add-SpawnNewTestFile -Path (Join-Path $Work 'Langsam.psm1') -Content 'function Get-SpawnNewSourceScan { param($Source, $MaxDepth, $Diagnostics) Start-Sleep -Seconds 30 }'
+    $resolve  = Get-Module -Name 'SpawnNew.Resolve'
+    $original = & $resolve { ${function:Invoke-SpawnNewSourceScan} }
+
+    # Der uebergebene Modulpfad landet in $args und wird durch $slow ersetzt.
+    $replacement = {
+        param($Source, $MaxDepth, $TimeoutMs)
+        & $original -Source $Source -MaxDepth $MaxDepth -TimeoutMs $TimeoutMs -CatalogModulePath $slow
+    }.GetNewClosure()
+
+    & $resolve { param($Function) Set-Item -Path function:script:Invoke-SpawnNewSourceScan -Value $Function } $replacement
+
+    try {
+        $config.SourceTimeoutMs = 200
+        $catalog = Get-SpawnNewCatalog -Config $config
+    }
+    finally {
+        & $resolve { param($Original) Set-Item -Path function:script:Invoke-SpawnNewSourceScan -Value $Original } $original
+    }
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $catalog.Actions.Count -Expected 1
     Confirm-SpawnNewValue -Label 'veraltet' -Actual $catalog.Actions[0].Stale -Expected $true
@@ -96,7 +117,7 @@ Add-SpawnNewTest 'Zu alter Cache wird verworfen' {
     $Work = Get-SpawnNewTestDirectory
     $source = Join-Path $Work 'p'
     [void](Add-SpawnNewTestAction -Directory (Join-Path $source 'Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }')
-    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $source + '", "order": 100 }')
+    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $source) + '", "order": 100 }')
     [void](Get-SpawnNewCatalog -Config $config)
 
     $cache   = Get-SpawnNewCacheFilePath -Source $config.Sources[0]
@@ -117,7 +138,7 @@ Add-SpawnNewTest 'Zu alter Cache wird verworfen' {
 Add-SpawnNewTest 'Cache mit fremder Version wird verworfen' {
     $Work = Get-SpawnNewTestDirectory
     $source = Join-Path $Work 'p'
-    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $source + '", "order": 100 }')
+    $config = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $source) + '", "order": 100 }')
     $cache  = Get-SpawnNewCacheFilePath -Source $config.Sources[0]
     [void](Add-SpawnNewTestFile -Path $cache -Content '{ "schemaVersion": 99, "savedUtc": "2099-01-01T00:00:00.0000000Z", "actions": [] }')
 
@@ -131,7 +152,7 @@ Add-SpawnNewTest 'Cache mit fremder Version wird verworfen' {
 
 Add-SpawnNewTest 'Nicht erreichbare Quelle ohne Cache liefert einfach nichts' {
     $Work = Get-SpawnNewTestDirectory
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/gibtesnicht", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/gibtesnicht", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $catalog.Actions.Count -Expected 0
@@ -142,8 +163,8 @@ Add-SpawnNewTest 'Eine fehlerhafte Quelle blockiert die anderen nicht' {
     $Work = Get-SpawnNewTestDirectory
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 's/Heil') -Json '{ "schemaVersion": 1, "id": "spawnnew.heil" }')
     $config = Get-ResolveFixture -Work $Work -Sources (
-        '{ "name": "Weg", "path": "' + $Work + '/weg", "order": 100 },' +
-        '{ "name": "S",   "path": "' + $Work + '/s",   "order": 900 }')
+        '{ "name": "Weg", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/weg", "order": 100 },' +
+        '{ "name": "S",   "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/s",   "order": 900 }')
     $catalog = Get-SpawnNewCatalog -Config $config
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $catalog.Actions.Count -Expected 1
@@ -153,7 +174,7 @@ Add-SpawnNewTest 'Eine fehlerhafte Quelle blockiert die anderen nicht' {
 Add-SpawnNewTest 'Unveraenderte Aktion besteht die Nachpruefung' {
     $Work = Get-SpawnNewTestDirectory
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }')
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
 
     $result = Test-SpawnNewAction -Action (Get-TestAction -Catalog $catalog -Id 'spawnnew.gitproject')
@@ -165,7 +186,7 @@ Add-SpawnNewTest 'Unveraenderte Aktion besteht die Nachpruefung' {
 Add-SpawnNewTest 'Aktion aus dem Cache wird nicht gestartet' {
     $Work = Get-SpawnNewTestDirectory
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }')
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
     $action  = Get-TestAction -Catalog $catalog -Id 'spawnnew.gitproject'
     $action.Stale = $true
@@ -179,7 +200,7 @@ Add-SpawnNewTest 'Aktion aus dem Cache wird nicht gestartet' {
 Add-SpawnNewTest 'Geaenderte Aktions-ID verhindert den Start' {
     $Work = Get-SpawnNewTestDirectory
     $directory = Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }'
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
     $action  = Get-TestAction -Catalog $catalog -Id 'spawnnew.gitproject'
 
@@ -193,7 +214,7 @@ Add-SpawnNewTest 'Geaenderte Aktions-ID verhindert den Start' {
 Add-SpawnNewTest 'Entferntes Einstiegsskript verhindert den Start' {
     $Work = Get-SpawnNewTestDirectory
     $directory = Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }'
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
     $action  = Get-TestAction -Catalog $catalog -Id 'spawnnew.gitproject'
 
@@ -207,7 +228,7 @@ Add-SpawnNewTest 'Entferntes Einstiegsskript verhindert den Start' {
 Add-SpawnNewTest 'Verschwundene Quelle verhindert den Start' {
     $Work = Get-SpawnNewTestDirectory
     [void](Add-SpawnNewTestAction -Directory (Join-Path $Work 'p/Git') -Json '{ "schemaVersion": 1, "id": "spawnnew.gitproject" }')
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
     $action  = Get-TestAction -Catalog $catalog -Id 'spawnnew.gitproject'
 
@@ -221,7 +242,7 @@ Add-SpawnNewTest 'Verschwundene Quelle verhindert den Start' {
 Add-SpawnNewTest 'Einzelskript wird vor dem Start auf Vorhandensein geprueft' {
     $Work = Get-SpawnNewTestDirectory
     $script = Add-SpawnNewTestFile -Path (Join-Path $Work 'p/Werkzeug.ps1') -Content 'param()'
-    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + $Work + '/p", "order": 100 }')
+    $config  = Get-ResolveFixture -Work $Work -Sources ('{ "name": "P", "path": "' + (ConvertTo-SpawnNewJsonText $Work) + '/p", "order": 100 }')
     $catalog = Get-SpawnNewCatalog -Config $config
     $action  = $catalog.Actions[0]
 

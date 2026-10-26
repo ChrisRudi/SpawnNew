@@ -44,8 +44,7 @@ else {
 }
 
 $target = Join-Path (Join-Path $moduleRoot 'PSScriptAnalyzer') $Version
-$url    = 'https://github.com/PowerShell/PSScriptAnalyzer/releases/download/' +
-          ('{0}/PSScriptAnalyzer.{0}.nupkg' -f $Version)
+$url    = 'https://github.com/PowerShell/PSScriptAnalyzer/releases/download/{0}/PSScriptAnalyzer.{0}.nupkg' -f $Version
 
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ('psa-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work -Force | Out-Null

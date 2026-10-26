@@ -91,7 +91,8 @@ function Test-SpawnNewNumber {
 
     if ($null -eq $Value) { return $false }
 
-    $numeric = @([byte], [short], [int], [long], [double], [decimal])
+    # [short] gibt es erst ab PowerShell 6; [int16] gilt auch unter 5.1.
+    $numeric = @([byte], [int16], [int], [long], [double], [decimal])
     return ($numeric -contains $Value.GetType())
 }
 
@@ -138,6 +139,21 @@ function Import-SpawnNewHostModule {
     foreach ($entry in $Name) {
         Import-Module (Join-Path $hostRoot ('SpawnNew.' + $entry + '.psm1')) -ErrorAction Stop
     }
+}
+
+function ConvertTo-SpawnNewJsonText {
+    <#
+    .SYNOPSIS
+    Maskiert eine Zeichenkette fuer den Einbau in eine JSON-Zeichenkette.
+    .DESCRIPTION
+    Windows-Pfade enthalten Rueckstriche, die in JSON als Escape gelten.
+    Ungeschuetzt eingesetzt ergeben sie ungueltige JSON.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Text)
+
+    return $Text.Replace('\', '\\').Replace('"', '\"')
 }
 
 function Add-SpawnNewTestFile {
@@ -278,4 +294,4 @@ function Invoke-SpawnNewTest {
     return $failures.Count
 }
 
-Export-ModuleMember -Function Write-SpawnNewTestLine, Get-SpawnNewTestDirectory, Add-SpawnNewTest, Confirm-SpawnNewValue, Test-SpawnNewNumber, Confirm-SpawnNewCondition, Confirm-SpawnNewMatch, Import-SpawnNewHostModule, Add-SpawnNewTestFile, Add-SpawnNewTestAction, Get-SpawnNewTestFile, Invoke-SpawnNewTest
+Export-ModuleMember -Function Write-SpawnNewTestLine, Get-SpawnNewTestDirectory, Add-SpawnNewTest, Confirm-SpawnNewValue, Test-SpawnNewNumber, Confirm-SpawnNewCondition, Confirm-SpawnNewMatch, Import-SpawnNewHostModule, ConvertTo-SpawnNewJsonText, Add-SpawnNewTestFile, Add-SpawnNewTestAction, Get-SpawnNewTestFile, Invoke-SpawnNewTest
