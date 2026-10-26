@@ -8,25 +8,33 @@ und Windows 11. Anforderungen und Abnahmekriterien stehen in
 
 ## Installieren und testen
 
-Ein Befehl in Windows PowerShell 5.1, ohne Administratorrechte:
+### In einer PowerShell-Sitzung
+
+Das ist der normale Fall. Eine Zeile, ohne Administratorrechte:
+
+```
+[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = "$env:TEMP\spawnnew.zip"; $dir = "$env:TEMP\spawnnew"; Invoke-WebRequest 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive $zip $dir -Force; & "$dir\SpawnNew-main\src\Install-SpawnNew.ps1" -Scope CurrentUser
+```
+
+Entfernen, Benutzerdaten bleiben erhalten:
+
+```
+[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = "$env:TEMP\spawnnew.zip"; $dir = "$env:TEMP\spawnnew"; Invoke-WebRequest 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive $zip $dir -Force; & "$dir\SpawnNew-main\src\Install-SpawnNew.ps1" -Scope CurrentUser -Uninstall
+```
+
+### In cmd.exe, im Ausfuehren-Dialog oder in einer Verknuepfung
+
+Hier wird `powershell.exe` selbst gestartet. Diese Fassung **nicht** in eine
+schon laufende PowerShell-Sitzung einfuegen: die aeussere Sitzung wuerde
+`$zip` und `$dir` vorher durch leere Werte ersetzen.
 
 ```
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser }"
 ```
 
-Danach Rechtsklick in den leeren Bereich eines Ordners, dann **SpawnNew**.
-Unter Windows 11 zuerst **Weitere Optionen anzeigen** — die direkte Anzeige
-in der ersten Menueebene verlangt `IExplorerCommand` und ist noch offen.
-
-Derselbe Befehl wirkt beim zweiten Lauf als Aktualisierung. Er steht auch in
-`config/spawnnew.settings.default.json` unter `install` und `update` und wird
-spaeter aus dem Menue angeboten.
-
-Entfernen, Benutzerdaten bleiben erhalten:
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser -Uninstall }"
-```
+Diese Fassung steht auch in `config/spawnnew.settings.default.json` unter
+`install` und `update`, weil der Menueeintrag spaeter einen eigenen Prozess
+startet und keine aeussere Sitzung dazwischenliegt.
 
 ### Aus einem lokalen Klon
 
@@ -34,8 +42,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePoin
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\src\Install-SpawnNew.ps1 -Scope CurrentUser
 ```
 
-`-Scope AllUsers` installiert fuer alle Benutzer und braucht
-Administratorrechte. `-Uninstall` entfernt die Installation.
+### Hinweise
+
+Nach der Installation Rechtsklick in den leeren Bereich eines Ordners, dann
+**SpawnNew**. Unter Windows 11 zuerst **Weitere Optionen anzeigen** — die
+direkte Anzeige in der ersten Menueebene verlangt `IExplorerCommand` und ist
+noch offen.
+
+Erneutes Ausfuehren wirkt als Aktualisierung. `-Scope AllUsers` installiert
+fuer alle Benutzer und braucht Administratorrechte.
+
+Der Installer darf unter Windows PowerShell 5.1 oder unter PowerShell 7
+laufen. Die Aktionen selbst startet SpawnNew immer mit `powershell.exe`,
+also mit Windows PowerShell 5.1.
+
+Der Installer nennt am Ende, wie viele Aktionen registriert wurden und aus
+welcher Quelle. Steht dort `0`, nennen die Hinweiszeilen den Grund.
 
 ### Was der erste Test zeigen soll
 
