@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "configVersion": "1.0",
+  "configVersion": "1.1",
   "comment": "config/spawnnew.settings.default.json - mitgelieferte Standardkonfiguration. Benutzerwerte gehoeren nach %LOCALAPPDATA%\\SpawnNew\\spawnnew.settings.json und werden nie von einem Update ueberschrieben.",
   "sourceTimeoutMs": 1500,
   "cacheMaxAgeMinutes": 1440,
@@ -20,11 +20,11 @@
     }
   ],
   "install": {
-    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%SPAWNNEW_APP%\\Install-SpawnNew.ps1\" -Scope CurrentUser",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\\src\\Install-SpawnNew.ps1') -Scope CurrentUser }\"",
     "requiresAdmin": false
   },
   "update": {
-    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%SPAWNNEW_APP%\\Install-SpawnNew.ps1\" -Scope CurrentUser -Update",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\\src\\Install-SpawnNew.ps1') -Scope CurrentUser }\"",
     "requiresAdmin": false
   }
 }

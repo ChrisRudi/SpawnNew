@@ -85,11 +85,17 @@ function Get-SpawnNewConfigLayerPath {
     [OutputType([string[]])]
     param([Parameter(Mandatory)][string]$AppDirectory)
 
-    $machine = Join-Path (Join-Path $env:ProgramData 'SpawnNew') 'spawnnew.settings.json'
-    $user    = Join-Path (Get-SpawnNewDataDirectory) 'spawnnew.settings.json'
-    $default = Join-Path $AppDirectory 'spawnnew.settings.default.json'
+    $layers = New-Object System.Collections.ArrayList
 
-    return [string[]]@($user, $machine, $default)
+    if ($env:LOCALAPPDATA) {
+        [void]$layers.Add((Join-Path (Get-SpawnNewDataDirectory) 'spawnnew.settings.json'))
+    }
+    if ($env:ProgramData) {
+        [void]$layers.Add((Join-Path (Join-Path $env:ProgramData 'SpawnNew') 'spawnnew.settings.json'))
+    }
+    [void]$layers.Add((Join-Path $AppDirectory 'spawnnew.settings.default.json'))
+
+    return [string[]]$layers.ToArray()
 }
 
 function Test-SpawnNewProperty {

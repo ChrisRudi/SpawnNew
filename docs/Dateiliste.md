@@ -244,16 +244,23 @@ Nachladen beim Öffnen des Menüs kommt erst mit der DLL.
 
 ## 14. Installations- und Aktualisierungseinzeiler
 
-Beide stehen in der Konfiguration unter `install` und `update` und werden
-vor der Ausfuehrung vollstaendig angezeigt. Vorgabe:
+Beide stehen in der Konfiguration unter `install` und `update` und werden vor
+der Ausfuehrung vollstaendig angezeigt. Sie sind identisch: die Installation
+ist wiederholbar und wirkt beim zweiten Lauf als Aktualisierung.
 
 ```
-install: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<App>\Install-SpawnNew.ps1" -Scope CurrentUser
-update:  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<App>\Install-SpawnNew.ps1" -Scope CurrentUser -Update
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { ... }"
 ```
 
-`Install-SpawnNew.ps1` schreibt ausschliesslich unter `App` und in die
-Menuregistrierung.
+Der Einzeiler laedt das Archiv des main-Branch nach `%TEMP%`, entpackt es und
+ruft `src\Install-SpawnNew.ps1` auf. TLS 1.2 wird ausdruecklich gesetzt, weil
+Windows PowerShell 5.1 sonst je nach System eine aeltere Fassung aushandelt.
+
+`Install-SpawnNew.ps1` kopiert `src\Host\*` und `src\Actions` in das
+Programmverzeichnis, legt die Standardkonfiguration daneben, loest den Katalog
+auf und schreibt daraus die Registrierungseintraege aus Abschnitt 13. Es
+schreibt ausschliesslich unter `App` und in die Menuregistrierung.
+`-Uninstall` entfernt beides und nennt die erhaltenen Benutzerdaten.
 
 ## 15. Encoding
 

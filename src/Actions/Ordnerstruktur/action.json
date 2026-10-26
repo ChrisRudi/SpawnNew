@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.folderstructure",
+  "title": "Ordnerstruktur",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "fields": [
+    { "name": "name", "label": "Name", "type": "text", "required": true },
+    { "name": "vorlage", "label": "Strukturvorlage", "type": "choice", "choices": [ "Projekt", "Unterricht", "Minimal" ], "default": "Projekt" },
+    { "name": "zweck", "label": "Zweck (fuer README)", "type": "text", "required": false }
+  ],
+  "plannedSteps": [
+    "Zielordner anlegen",
+    "Unterordner der gewaehlten Strukturvorlage anlegen",
+    "README.md mit Name, Zweck und Datum anlegen"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "comment": "Vorlagen.json - Unterordner je Strukturvorlage fuer die Aktion Ordnerstruktur.",
+  "vorlagen": {
+    "Projekt": [ "01 Planung", "02 Umsetzung", "03 Dokumentation", "04 Abgabe" ],
+    "Unterricht": [ "Arbeitsblaetter", "Loesungen", "Material", "Rueckgaben" ],
+    "Minimal": [ "Dokumente" ]
+  }
+}

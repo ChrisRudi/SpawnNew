@@ -1,4 +1,4 @@
-<!-- README.md | Version 1.1 | 26.10.2026 -->
+<!-- README.md | Version 1.2 | 26.10.2026 -->
 
 # SpawnNew
 
@@ -6,45 +6,81 @@ Explorer-Kontextmenue fuer vorbereitete Arbeitsumgebungen unter Windows 10
 und Windows 11. Anforderungen und Abnahmekriterien stehen in
 [`SpawnNew.md`](SpawnNew.md).
 
+## Installieren und testen
+
+Ein Befehl in Windows PowerShell 5.1, ohne Administratorrechte:
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser }"
+```
+
+Danach Rechtsklick in den leeren Bereich eines Ordners, dann **SpawnNew**.
+Unter Windows 11 zuerst **Weitere Optionen anzeigen** — die direkte Anzeige
+in der ersten Menueebene verlangt `IExplorerCommand` und ist noch offen.
+
+Entfernen, Benutzerdaten bleiben erhalten:
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser -Uninstall }"
+```
+
+Aus einem Klon statt aus dem Netz:
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\src\Install-SpawnNew.ps1 -Scope CurrentUser
+```
+
+`-Scope AllUsers` installiert fuer alle Benutzer und braucht
+Administratorrechte. Erneutes Ausfuehren wirkt als Aktualisierung.
+
+### Was der erste Test zeigen soll
+
+1. **SpawnNew** erscheint im Kontextmenue, darunter **Ordnerstruktur**.
+2. Ein Klick oeffnet das Formular mit Zielordner, Name, Strukturvorlage und Zweck.
+3. Ein leerer Name oder ein Name mit `\ / : * ? " < > |` wird abgewiesen.
+4. Die Zusammenfassung nennt Ziel, Eingaben und die drei geplanten Schritte.
+5. **Abbrechen** legt nichts an.
+6. **Erstellen** zeigt das Fortschrittsfenster und danach den Status.
+7. Ein zweiter Lauf mit gleichem Namen fragt: abbrechen, umbenennen, vorhandenen Ordner verwenden.
+8. Eine selbst geschriebene `README.md` im Ziel wird nicht ueberschrieben; der Status lautet dann `partial`.
+
 ## Stand
 
-| Umsetzungsschritt (`SpawnNew.md` Abschnitt 13) | Stand |
+| Umsetzungsschritt (`SpawnNew.md` Abschnitt 14) | Stand |
 |---|---|
-| 1. Dateinamen, Konfiguration, IDs, Prioritaet, Schnittstellenvertrag | fertig, siehe `docs/` |
-| 2. Explorer-Prototyp Windows 10 und 11 | offen |
+| 1. Dateinamen, Konfiguration, IDs, Prioritaet, Schnittstellenvertrag | fertig |
+| 2. Explorer-Prototyp: direkte Anzeige unter Windows 11 per `IExplorerCommand` | offen |
 | 3. Quellen, Prioritaet, IDs, Nachladen, Cache, Beschreibungspruefung | fertig und geprueft |
-| 4. Formular, Zusammenfassung, PowerShell-Start | fertig; WinForms noch nicht auf Windows erprobt |
-| 5. Fortschritt, Fehler, Rechte, Aufraeumen | fertig; WinForms noch nicht auf Windows erprobt |
-| 6. Sieben mitgelieferte Aktionen | offen |
-| 7. Installation, Aktualisierung, Konfiguration, Deinstallation | offen |
-| 8. Menueeintraege fuer Installation und Aktualisierung | Katalogausgabe fertig, Registrierung offen |
-| 9. Abnahme auf Windows 10 und 11 | offen |
+| 4. Formular, Zusammenfassung, PowerShell-Start | fertig; WinForms erst auf Windows erprobbar |
+| 5. Fortschritt, Fehler, Rechte, Aufraeumen | fertig; WinForms erst auf Windows erprobbar |
+| 6. Dokumenterzeugung mit Platzhaltern in Markdown und `.docx` | offen |
+| 7. KI-Anbindung Stufe 1, lokaler Endpunkt | offen |
+| 8. KI-Anbindung Stufe 2, Webendpunkt mit verschluesseltem Schluessel | offen |
+| 9. NTFS-Rechte aus der Vorlage | offen |
+| 10. Elf mitgelieferte Aktionen | 1 von 11 |
+| 11. Installation, Aktualisierung, Deinstallation | fertig in der Registrierungsstufe |
+| 12. Menueeintraege fuer Installation und Aktualisierung | Katalogausgabe fertig, Registrierung offen |
+| 13. Abnahme auf Windows 10 und 11 | offen |
+
+Die Menueregistrierung laeuft vorerst ueber die Registrierungsdatenbank
+(`Directory\Background\shell`) und entsteht bei der Installation aus dem
+Katalog. Dynamisches Nachladen beim Oeffnen des Menues und die erste
+Menueebene unter Windows 11 kommen mit der DLL aus Schritt 2.
 
 ## Aufbau
 
 | Pfad | Inhalt |
 |---|---|
 | `SpawnNew.md` | Konzept und Anforderungen |
-| `docs/Dateiliste.md` | festgelegte Dateinamen, Ablage, Konfigurationsschichten, ID-Regeln, Beschreibungsformat |
+| `docs/Dateiliste.md` | Dateinamen, Ablage, Konfigurationsschichten, ID-Regeln, Beschreibungsformat, Registrierungsaufbau |
 | `docs/Aktionsvertrag.md` | Vertrag zwischen Ausfuehrungsprozess und Aktionsskript |
 | `config/` | mitgelieferte Standardkonfiguration |
+| `src/Install-SpawnNew.ps1` | Installation, Aktualisierung, Deinstallation |
 | `src/Host/` | Ausfuehrungsprozess, Windows PowerShell 5.1 |
-| `src/Explorer/` | native Explorer-Erweiterung, C++ |
+| `src/Explorer/` | native Explorer-Erweiterung, C++, noch leer |
 | `src/Actions/` | mitgelieferte Aktionen |
-| `tests/` | Tests zu den Bausteinen des Ausfuehrungsprozesses |
+| `tests/` | Tests zu den Bausteinen und zum Ausfuehrungsvertrag |
 | `tools/` | Pruefwerkzeuge, nicht Teil der Installation |
-
-## Einstiegspunkte
-
-| Datei | Aufruf |
-|---|---|
-| `src/Host/SpawnNew.Catalog.ps1` | Menuekatalog als JSON fuer die Explorer-Erweiterung |
-| `src/Host/SpawnNew.Host.ps1` | Abwicklung einer gewaehlten Aktion |
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File src\Host\SpawnNew.Catalog.ps1 -OutputFile %TEMP%\spawnnew-katalog.json
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File src\Host\SpawnNew.Host.ps1 -ActionId spawnnew.gitproject -ExplorerPath D:\Projekte
-```
 
 ## Pruefen
 
@@ -58,17 +94,18 @@ pwsh -NoProfile -File tools/Invoke-Lint.ps1
 pwsh -NoProfile -File tools/Invoke-Test.ps1
 ```
 
-`Invoke-Lint.ps1` endet mit Rueckgabewert 1, sobald Befunde ab Stufe
-`Warning` auftreten; `-Severity Information` zeigt auch Hinweise. Der
-vollstaendige Lauf dauert einige Minuten, weil PSScriptAnalyzer das
-Kompatibilitaetsprofil je Pfad neu laedt.
+`Invoke-Lint.ps1` endet mit Rueckgabewert 1 ab Stufe `Warning`;
+`-Severity Information` zeigt auch Hinweise. Der Lauf dauert einige Minuten,
+weil PSScriptAnalyzer das Kompatibilitaetsprofil je Pfad neu laedt.
 
 `Invoke-Test.ps1` endet mit Rueckgabewert 1 bei mindestens einem Fehler.
 `-Filter` grenzt auf einzelne Testfaelle ein, `-Path` auf einzelne Dateien.
 
 `SpawnNew.Form.psm1` und `SpawnNew.Progress.psm1` laden WinForms und sind nur
-auf Windows ausfuehrbar. Die Regeln dahinter liegen in `SpawnNew.Input.psm1`
-und `SpawnNew.Target.psm1` und sind dort geprueft.
+auf Windows ausfuehrbar; `SpawnNew.Register.psm1` schreibt in die
+Registrierungsdatenbank. Die Regeln dahinter liegen in `SpawnNew.Input.psm1`,
+`SpawnNew.Target.psm1` und den reinen Funktionen von `SpawnNew.Register.psm1`
+und sind dort geprueft.
 
 ## Bauen
 
