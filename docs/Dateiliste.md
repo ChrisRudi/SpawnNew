@@ -58,7 +58,7 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 ## 4. Mitgelieferte Aktionen (`src/Actions/`)
 
 Je Aktion ein Ordner mit `action.json` und `Invoke-SpawnAction.ps1`.
-Vorhanden ist bisher nur `Ordnerstruktur`; die uebrigen Ordner sind
+Vorhanden sind bisher `Ordnerstruktur` und `GitProjekt`; die uebrigen Ordner sind
 festgelegt, aber noch nicht angelegt.
 
 | Ordner | Aktions-ID | Nr. in Abschnitt 4 |
@@ -109,6 +109,7 @@ beschreiben.
 | `SpawnNew.CatalogCli.Tests.ps1` | die JSON-Ausgabe fuer die Explorer-Erweiterung |
 | `SpawnNew.Register.Tests.ps1` | Registrierungseintraege, Schluesselnamen, Befehlszeile |
 | `SpawnNew.Ordnerstruktur.Tests.ps1` | die mitgelieferte Aktion 1 gegen den Ausfuehrungsvertrag |
+| `SpawnNew.GitProjekt.Tests.ps1` | die mitgelieferte Aktion 2 mit echtem `git`, Rechnerkonfiguration ausgeblendet |
 
 Die Tests laufen unter Windows PowerShell 5.1 und unter PowerShell 7.
 Pfade, die in JSON-Texte eingesetzt werden, gehen ueber

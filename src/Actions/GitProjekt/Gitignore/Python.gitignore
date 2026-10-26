@@ -1,0 +1,31 @@
+# Python.gitignore - mitgelieferte Vorlage der Aktion Git-Projekt
+
+# Bytecode
+__pycache__/
+*.py[cod]
+
+# Umgebungen
+.venv/
+venv/
+env/
+.env
+
+# Build und Pakete
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Tests und Werkzeuge
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Betriebssystem und Editoren
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

@@ -1,0 +1,20 @@
+# Allgemein.gitignore - mitgelieferte Vorlage der Aktion Git-Projekt
+
+# Betriebssystem
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Editoren
+.vscode/
+.idea/
+*.swp
+*~
+
+# Protokolle und Zwischenstaende
+*.log
+*.tmp
+*.bak
+~$*

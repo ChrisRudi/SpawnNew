@@ -265,7 +265,11 @@ function Get-SpawnNewSummaryText {
     }
     foreach ($entry in $Field) {
         $shown = ''
-        if ($Value.ContainsKey($entry.Name)) { $shown = [string]$Value[$entry.Name] }
+        if ($Value.ContainsKey($entry.Name)) {
+            $raw = $Value[$entry.Name]
+            if ($raw -is [bool]) { $shown = if ($raw) { 'Ja' } else { 'Nein' } }
+            else { $shown = [string]$raw }
+        }
         if ($shown.Length -eq 0) { $shown = '(leer)' }
         [void]$lines.Add('  ' + $entry.Label + ': ' + $shown)
     }

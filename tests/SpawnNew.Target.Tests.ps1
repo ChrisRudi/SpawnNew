@@ -208,3 +208,17 @@ Add-SpawnNewTest 'Zusammenfassung weist auf Rechte und vorhandenen Ordner hin' {
     Confirm-SpawnNewMatch -Label 'keine Eingaben' -Actual $text -Pattern 'keine'
     Confirm-SpawnNewMatch -Label 'keine Schritte' -Actual $text -Pattern 'nennt keine Schritte'
 }
+
+Add-SpawnNewTest 'Zusammenfassung zeigt Wahrheitswerte als Ja und Nein' {
+    $diagnostics = New-Object System.Collections.ArrayList
+    $holder = [pscustomobject]@{
+        Fields          = (ConvertFrom-Json '[ { "name": "commit", "label": "Commit", "type": "bool" }, { "name": "push", "label": "Push", "type": "bool" } ]')
+        DescriptionPath = ''
+    }
+    $fields = @(Get-SpawnNewFieldList -Action $holder -Diagnostics $diagnostics)
+
+    $text = Get-SpawnNewSummaryText -Action (Get-TestActionObject) -TargetPath 'D:\Neu' -Field $fields -Value @{ commit = $true; push = $false } -ConflictPolicy 'fail' -TargetExisted $false
+
+    Confirm-SpawnNewMatch -Label 'wahr' -Actual $text -Pattern 'Commit: Ja'
+    Confirm-SpawnNewMatch -Label 'falsch' -Actual $text -Pattern 'Push: Nein'
+}

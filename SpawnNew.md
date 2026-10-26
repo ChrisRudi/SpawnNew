@@ -4,8 +4,8 @@
 
 Konzept und Anforderungen, Version 1.4 vom 26.10.2026.
 Status: Ausführungsprozess und Katalogauflösung umgesetzt und geprüft;
-Installation mit Menüregistrierung und Aktion 1 umgesetzt;
-Explorer-Erweiterung, zehn mitgelieferte Aktionen und KI-Anbindung offen.
+Installation mit Menüregistrierung sowie Aktionen 1 und 2 umgesetzt;
+Explorer-Erweiterung, neun mitgelieferte Aktionen und KI-Anbindung offen.
 
 ## 1. Ziel
 
@@ -298,7 +298,7 @@ Eine Möglichkeit zur Quellen- und Endpunktkonfiguration muss ohne eigenständig
 | 7 | KI-Anbindung Stufe 1: lokaler OpenAI-kompatibler Endpunkt, Voraussetzungsprüfung, Aktionen 17 bis 19 | offen |
 | 8 | KI-Anbindung Stufe 2: Webendpunkt mit verschlüsselt gespeichertem Schlüssel | offen |
 | 9 | NTFS-Rechte aus der Vorlage setzen | offen |
-| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | 1 von 11 (Ordnerstruktur) |
+| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | 2 von 11 (Ordnerstruktur, Git-Projekt) |
 | 11 | Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | Installation, Aktualisierung und Deinstallation fertig in der Registrierungsstufe; Konfigurationszugriff offen |
 | 12 | Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus, Fehleranzeige | Katalogausgabe fertig; Registrierung und Bestätigung offen |
 | 13 | Abnahmekriterien auf Windows 10 und 11 mit erreichbaren und nicht erreichbaren Quellen prüfen | offen |

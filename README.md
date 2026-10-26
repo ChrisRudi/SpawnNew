@@ -76,7 +76,7 @@ Aendert nichts.
 
 ### Was der erste Test zeigen soll
 
-1. **SpawnNew** erscheint im Kontextmenue, darunter **Ordnerstruktur**.
+1. **SpawnNew** erscheint im Kontextmenue, darunter **Git-Projekt** und **Ordnerstruktur**.
 2. Ein Klick oeffnet das Formular mit Zielordner, Name, Strukturvorlage und Zweck.
 3. Ein leerer Name oder ein Name mit `\ / : * ? " < > |` wird abgewiesen.
 4. Die Zusammenfassung nennt Ziel, Eingaben und die drei geplanten Schritte.
@@ -84,6 +84,16 @@ Aendert nichts.
 6. **Erstellen** zeigt das Fortschrittsfenster und danach den Status.
 7. Ein zweiter Lauf mit gleichem Namen fragt: abbrechen, umbenennen, vorhandenen Ordner verwenden.
 8. Eine selbst geschriebene `README.md` im Ziel wird nicht ueberschrieben; der Status lautet dann `partial`.
+
+Fuer **Git-Projekt** zusaetzlich:
+
+1. Das Formular bietet Gitignore-Vorlage, Beschreibung und **Ersten Commit anlegen**.
+2. Die Zusammenfassung zeigt den Commit-Wunsch als `Ja` oder `Nein`.
+3. Ohne eingerichtete Git-Identitaet (`user.name`, `user.email`) bricht die Aktion
+   mit Commit vor jeder Aenderung ab und nennt die beiden `git config`-Befehle;
+   ohne Commit laeuft sie durch.
+4. Im Ziel liegt danach ein Repository; `git log` zeigt den ersten Commit.
+5. Ein Ordner, der schon ein Repository ist, wird nicht angetastet.
 
 ## Stand
 
@@ -98,7 +108,7 @@ Aendert nichts.
 | 7. KI-Anbindung Stufe 1, lokaler Endpunkt | offen |
 | 8. KI-Anbindung Stufe 2, Webendpunkt mit verschluesseltem Schluessel | offen |
 | 9. NTFS-Rechte aus der Vorlage | offen |
-| 10. Elf mitgelieferte Aktionen | 1 von 11 |
+| 10. Elf mitgelieferte Aktionen | 2 von 11 (Ordnerstruktur, Git-Projekt) |
 | 11. Installation, Aktualisierung, Deinstallation | fertig in der Registrierungsstufe; Konfigurationszugriff offen |
 | 12. Menueeintraege fuer Installation und Aktualisierung | Katalogausgabe fertig; Registrierung und Bestaetigung offen |
 | 13. Abnahme auf Windows 10 und 11 | offen |

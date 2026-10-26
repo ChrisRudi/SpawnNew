@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.gitproject",
+  "title": "Git-Projekt",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "fields": [
+    { "name": "name", "label": "Name", "type": "text", "required": true },
+    { "name": "gitignore", "label": "Gitignore-Vorlage", "type": "choice", "choices": [ "Allgemein", "PowerShell", "VisualStudio", "Python", "Node", "Keine" ], "default": "Allgemein" },
+    { "name": "beschreibung", "label": "Beschreibung (fuer README)", "type": "text", "required": false },
+    { "name": "commit", "label": "Ersten Commit anlegen", "type": "bool", "default": "true" }
+  ],
+  "prerequisites": [
+    { "kind": "command", "name": "git", "hint": "Git fuer Windows installieren: https://git-scm.com/download/win" }
+  ],
+  "plannedSteps": [
+    "Zielordner anlegen",
+    "Lokales Git-Repository initialisieren",
+    ".gitignore aus der gewaehlten Vorlage anlegen",
+    "README.md mit Name, Beschreibung und Datum anlegen",
+    "Optional: ersten Commit mit allen Dateien im Zielordner anlegen"
+  ]
+}

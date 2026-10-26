@@ -1,0 +1,24 @@
+# PowerShell.gitignore - mitgelieferte Vorlage der Aktion Git-Projekt
+
+# Betriebssystem und Editoren
+Thumbs.db
+Desktop.ini
+.vscode/
+*.swp
+
+# Pester- und Analyseausgaben
+TestResults/
+testResults.xml
+coverage.xml
+*.Tests.xml
+
+# Build und Pakete
+out/
+output/
+*.nupkg
+
+# Lokale Einstellungen und Zwischenstaende
+*.local.ps1
+*.local.json
+*.log
+*.tmp

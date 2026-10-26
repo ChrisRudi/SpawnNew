@@ -1,0 +1,39 @@
+# VisualStudio.gitignore - mitgelieferte Vorlage der Aktion Git-Projekt
+
+# Benutzerspezifische Dateien
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build-Ergebnisse
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]64/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+*.pdb
+*.ilk
+*.obj
+*.iobj
+*.ipdb
+*.tlog
+*.lastbuildstate
+
+# Tests
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+
+# Pakete
+packages/
+*.nupkg
+*.snupkg
+
+# Betriebssystem
+Thumbs.db
+Desktop.ini
