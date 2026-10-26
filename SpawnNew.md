@@ -1,13 +1,14 @@
-<!-- SpawnNew.md | Version 1.2 | 26.10.2026 -->
+<!-- SpawnNew.md | Version 1.3 | 26.10.2026 -->
 
 # SpawnNew
 
-Konzept und Anforderungen, Version 1.2 vom 26.10.2026.
-Status: Konzept überarbeitet; Anwendung noch nicht implementiert.
+Konzept und Anforderungen, Version 1.3 vom 26.10.2026.
+Status: Ausführungsprozess und Katalogauflösung umgesetzt und geprüft;
+Explorer-Erweiterung, mitgelieferte Aktionen und Installation offen.
 
 ## 1. Ziel
 
-SpawnNew erzeugt über das Windows-Explorer-Kontextmenü vorbereitete Arbeitsumgebungen. Eine Aktion kann Ordner und Dokumente anlegen, ein Git-Repository initialisieren oder später auch eine virtuelle Maschine erstellen.
+SpawnNew erzeugt über das Windows-Explorer-Kontextmenü vorbereitete Arbeitsumgebungen. Eine Aktion kann Ordner und Dokumente anlegen, ein Git-Repository initialisieren, ein abgeschlossenes Projekt archivieren, ein Sprachmodell um einen Entwurf bitten oder später auch eine virtuelle Maschine erstellen.
 
 Die Explorer-Anbindung ist unabhängig von PowerToys. Neue Aktionen werden aus konfigurierten Verzeichnissen geladen und über Windows PowerShell 5.1 umgesetzt. Neue oder geänderte Aktionen erfordern keinen Neubau der Explorer-Erweiterung.
 
@@ -18,7 +19,7 @@ Die Explorer-Anbindung ist unabhängig von PowerToys. Neue Aktionen werden aus k
 | Einstieg | Ausschließlich über das Explorer-Kontextmenü |
 | Darstellung | SpawnNew als Untermenü mit direkt auswählbaren Aktionen |
 | Betriebssysteme | Windows 10 und Windows 11; Ziel ist die direkte Anzeige im ersten Kontextmenü. Die technische Umsetzung wird je Betriebssystem getrennt registriert und abgenommen |
-| Aktionen | Genau sieben mitgelieferte Startaktionen; zusätzlich beliebig viele benutzerdefinierte Aktionen aus konfigurierten Quellen |
+| Aktionen | Genau elf mitgelieferte Startaktionen; zusätzlich beliebig viele benutzerdefinierte Aktionen aus konfigurierten Quellen |
 | Quellen | Mehrere frei konfigurierbare Verzeichnisse, lokal, OneDrive oder Netzwerkfreigabe |
 | Quellenpriorität | Explizite Reihenfolge aller Quellen. Bei gleicher Aktions-ID gewinnt die zuerst konfigurierte Quelle. Persönliche Quellen werden standardmäßig vor gemeinsamen Quellen eingeordnet, können aber durch eine explizite Reihenfolge anders priorisiert werden |
 | Aktions-ID | Nur eine explizit deklarierte, identische Aktions-ID darf eine andere Aktion ersetzen. Automatisch erzeugte IDs dürfen keine andere Aktion überschreiben |
@@ -35,13 +36,17 @@ Die Explorer-Anbindung ist unabhängig von PowerToys. Neue Aktionen werden aus k
 | Installation | Wahlweise für aktuellen Benutzer oder alle Benutzer |
 | Nachladen | Änderungen werden beim nächsten Öffnen des Kontextmenüs berücksichtigt. Bereits geöffnete Menüs werden nicht aktualisiert |
 | Quellenfehler | Fehlerhafte oder nicht erreichbare Quellen werden protokolliert, blockieren aber weder andere Quellen noch den Explorer dauerhaft |
-| Dokumente | Markdown oder Word-kompatible `.docx`-Dateien auswählbar; eigene Vorlagendateien möglich |
-| Vor dem Start | Zusammenfassung von Zielpfad, Eingaben und geplanten Schritten; danach ausdrücklich "Erstellen" |
+| Dokumente | Markdown oder Word-kompatible `.docx`-Dateien auswählbar; eigene Vorlagendateien möglich. Platzhalter werden auch im Inhalt einer `.docx` ersetzt, ohne Word-Automatisierung |
+| Ordnerrechte | Eine Vorlage darf NTFS-Rechte je Ordner deklarieren. Ein Kopieren über den Explorer verliert eigene Rechte und erbt die des Elternordners; die Umsetzung muss die deklarierten Rechte darum selbst setzen |
+| KI-Anbindung | Optional. Ein OpenAI-kompatibler Endpunkt, lokal oder im Web. Lokal ist die Vorgabe |
+| KI-Ausgabe | Nicht deterministisch. Sie wird nie ohne ausdrückliche Bestätigung in eine Datei geschrieben |
+| Geheimnisse | API-Schlüssel stehen nie in der Kontextdatei, im Fortschritt, im Protokoll oder in der Zusammenfassung. Getrennter Speicher, benutzer- und rechnergebunden |
+| Vor dem Start | Zusammenfassung von Zielpfad, Eingaben und geplanten Schritten; danach ausdrücklich „Erstellen“ |
 | Voraussetzungen | Fehlende Voraussetzungen verständlich anzeigen; keine automatische Installation |
-| Konfiguration | Quellen, Prioritäten und Installationsoptionen werden über eine separate Konfigurationsoberfläche oder eine dokumentierte Konfigurationsdatei verwaltet; diese Verwaltung ist keine fachliche Aktion |
-| Installation | Einzeilige Befehle für Installation und Aktualisierung stehen zusätzlich als Menüeinträge zur Verfügung |
+| Konfiguration | Quellen, Prioritäten, Endpunkte und Installationsoptionen werden über eine separate Konfigurationsoberfläche oder eine dokumentierte Konfigurationsdatei verwaltet; diese Verwaltung ist keine fachliche Aktion |
+| Einzeiler | Einzeilige Befehle für Installation und Aktualisierung stehen zusätzlich als Menüeinträge zur Verfügung |
 
-Die sieben mitgelieferten Startaktionen sind die Einträge 1, 2, 3, 7, 10, 11 und 14 in Abschnitt 4. Die Nummern sind stabile fachliche Kennungen und werden nicht als fortlaufende Anzahl interpretiert.
+Die elf mitgelieferten Startaktionen sind die Einträge 1, 2, 3, 7, 10, 11, 14, 15, 17, 18 und 19 in Abschnitt 4. Die Nummern sind stabile fachliche Kennungen und werden nicht als fortlaufende Anzahl interpretiert.
 
 ## 3. Bedienablauf
 
@@ -50,8 +55,8 @@ Die sieben mitgelieferten Startaktionen sind die Einträge 1, 2, 3, 7, 10, 11 un
 3. SpawnNew liest Beschreibung und prüft Voraussetzungen.
 4. Das Formular zeigt Vorgaben sowie den änderbaren Zielpfad.
 5. Der Benutzer ergänzt beispielsweise Projektname, Klasse, Thema oder Datum.
-6. Eine Zusammenfassung zeigt Zielpfad, Eingaben und geplante Schritte.
-7. "Erstellen" startet die Aktion. Falls deklariert, erfolgt dabei die Windows-Abfrage für Administratorrechte.
+6. Eine Zusammenfassung zeigt Zielpfad, Eingaben und geplante Schritte. Bei Aktionen, die einen Vorschlag erzeugen lassen, steht der Vorschlag hier.
+7. „Erstellen“ startet die Aktion. Falls deklariert, erfolgt dabei die Windows-Abfrage für Administratorrechte.
 8. Das Fortschrittsfenster zeigt den Ablauf und das Ergebnis.
 9. Optional wird der Zielordner geöffnet.
 
@@ -62,25 +67,29 @@ Zusätzlich stehen im SpawnNew-Untermenü folgende Verwaltungsbefehle zur Verfü
 
 Die Einzeiler werden nicht automatisch ausgeführt. Vor der Ausführung werden Befehl, Ziel und erforderliche Rechte angezeigt und ausdrücklich bestätigt. Die Befehle dürfen nur die SpawnNew-Installation beziehungsweise deren Programmdateien aktualisieren. Persönliche Aktionen, Quellen und Konfiguration dürfen nicht überschrieben werden.
 
-Abbrechen vor "Erstellen" darf keine fachlichen Änderungen durchführen. Das Öffnen des Menüs darf keine Aktionsskripte ausführen.
+Abbrechen vor „Erstellen“ darf keine fachlichen Änderungen durchführen. Das Öffnen des Menüs darf keine Aktionsskripte ausführen und keinen Netzzugriff auslösen.
 
 Bei eigenen Aktionsdialogen gelten dieselben Anforderungen an Eingaben, Vorprüfung, Zusammenfassung, Rechteabfrage und Abbruch. Das Formular ist Teil des aufgerufenen Ablaufs, kein eigenständiger Aktionsstarter.
 
 ## 4. Mitgelieferte Aktionen der ersten Version
 
-Die erste Version enthält genau sieben mitgelieferte Aktionen:
+Die erste Version enthält genau elf mitgelieferte Aktionen:
 
 | Nr. | Aktion | Eingaben und Ergebnis |
 |---|---|---|
-| 1 | Ordnerstruktur | Name, Zielpfad, Strukturvorlage; Unterordner und vorbereitete Dateien |
-| 2 | Git-Projekt | Name, Zielpfad, passende Gitignore-Vorlage; lokales Repository mit README und optionalem ersten Commit |
+| 1 | Ordnerstruktur | Name, Zielpfad, Strukturvorlage; Unterordner und vorbereitete Dateien. Deklariert die Vorlage NTFS-Rechte, werden sie gesetzt |
+| 2 | Git-Projekt | Name, Zielpfad, passende Gitignore-Vorlage; lokales Repository mit README und optionalem ersten Commit. Das reine Initialisieren deckt auch TortoiseGit ab; der Mehrwert liegt in Vorlage, README und erstem Commit in einem Schritt |
 | 3 | PowerShell-Werkzeug | Name, Zielpfad, Beschreibung; Skript mit Dateiname und Version im Kopf, Konfiguration und Kurzdokumentation |
-| 7 | Werkstättenprotokoll | Klasse, Thema, Datum, Ausgabeformat; Protokollvorlage sowie Bilder- und Messdatenordner |
-| 10 | Fehleranalyse | Titel, Umgebung, Datum; Fehlerbeschreibung, Reproduktionsschritte, Logs, Screenshots und Lösungsnachweis |
-| 11 | Sitzung | Gremium, Thema, Datum, Ausgabeformat; Tagesordnung, Unterlagen, Protokoll und Beschlussliste |
+| 7 | Werkstättenprotokoll | Klasse, Thema, Datum, Ausgabeformat, optional Entwurf erzeugen; Protokollvorlage sowie Bilder- und Messdatenordner |
+| 10 | Fehleranalyse | Titel, Umgebung, Datum, optional Entwurf erzeugen; Fehlerbeschreibung, Reproduktionsschritte, Logs, Screenshots und Lösungsnachweis |
+| 11 | Sitzung | Gremium, Thema, Datum, Ausgabeformat, optional Entwurf erzeugen; Tagesordnung, Unterlagen, Protokoll und Beschlussliste |
 | 14 | Eigene Aktion | Name und Aktions-ID; dokumentiertes Grundgerüst mit Skript und optionaler JSON-Beschreibung |
+| 15 | Projekt abschließen | Arbeitet im vorhandenen Ordner. Abschlussvermerk, Dateimanifest mit SHA-256 je Datei, optional ZIP und Verschieben in ein Archivverzeichnis |
+| 17 | Ordnerstruktur aus Beschreibung | Freitextbeschreibung, Zielpfad; ein Sprachmodell schlägt die Struktur vor, der Vorschlag erscheint in der Zusammenfassung und wird erst nach „Erstellen“ angelegt |
+| 18 | Datei zusammenfassen | Beliebige Textdatei, Modell; Zusammenfassung als Entwurfsdatei neben der Quelle |
+| 19 | Ordner dokumentieren | Zielordner, Modell; `README.md` als Entwurf aus Dateiliste und erkennbarem Zweck |
 
-Hyper-V, Webprojekte und weitere Aktionen bleiben Erweiterungsmöglichkeiten. Sie sind nicht Bestandteil der ersten sieben mitgelieferten Aktionen. Git-Projekte werden lokal erstellt; Remote-Erstellung und Veröffentlichung gehören nicht zum Standardablauf.
+Hyper-V, Webprojekte und weitere Aktionen bleiben Erweiterungsmöglichkeiten. Sie sind nicht Bestandteil der elf mitgelieferten Aktionen. Git-Projekte werden lokal erstellt; Remote-Erstellung und Veröffentlichung gehören nicht zum Standardablauf.
 
 ## 5. Aktionsformat
 
@@ -96,9 +105,7 @@ Ein Aktionsordner bündelt Einstiegsskript, optionale JSON-Beschreibung, Vorlage
 
 Ein Aktionsordner wird nur dann als Aktion erkannt, wenn sein Einstiegspunkt vorhanden und die Beschreibung syntaktisch gültig ist. Ungültige oder unvollständige Aktionsordner werden nicht ausgeführt und als Diagnose erfasst.
 
-### Technischer Entwurf der Beschreibung
-
-Die folgenden Angaben sind ein Schnittstellenentwurf, kein bereits implementiertes Schema:
+### Angaben der Beschreibung
 
 | Angabe | Zweck |
 |---|---|
@@ -109,11 +116,18 @@ Die folgenden Angaben sind ein Schnittstellenentwurf, kein bereits implementiert
 | `icon` | Optionales lokales Symbol |
 | `entryPoint` | Relativer Pfad zum Einstiegsskript |
 | `requiresAdmin` | Deklarierter Bedarf an Administratorrechten |
+| `supportsCancel` | Die Aktion prüft die Abbruchdatei zwischen Schritten |
+| `allowsOverwrite` | Überschreiben darf nach Bestätigung angeboten werden |
+| `targetKind` | `folder` bildet den Zielpfad aus Basisverzeichnis und Name; `inPlace` arbeitet im Basisverzeichnis selbst |
 | `defaultTarget` | Optionaler Standardzielpfad |
 | `fields` | Beschriebene Formularfelder mit Vorgaben und Prüfung |
-| `prerequisites` | Benötigte Programme, Module oder Dateien |
+| `secrets` | Benötigte Geheimnisse, nur mit Namen, nie mit Wert |
+| `permissions` | Optionale NTFS-Rechte je Ordner der Vorlage |
+| `prerequisites` | Benötigte Programme, Module, Dateien oder erreichbare Endpunkte |
 | `plannedSteps` | Für die Zusammenfassung geeignete Schrittbeschreibung |
 | `cleanup` | Optionaler relativer Einstiegspunkt für das Aufräumen nach Teilfehlern |
+
+Die genauen Werte, Vorgaben und Feldtypen stehen in `docs/Dateiliste.md` Abschnitt 8, der Ausführungsvertrag in `docs/Aktionsvertrag.md`, die KI-Anbindung in `docs/KI-Anbindung.md`.
 
 `requiresAdmin: true` darf nicht allein aus einer Beschreibung zu einer erhöhten Ausführung führen, wenn die Aktion die Rechte nicht tatsächlich benötigt. Die Anwendung zeigt die deklarierte Rechteanforderung vor dem Start an und fordert erhöhte Rechte erst nach ausdrücklicher Bestätigung an.
 
@@ -137,7 +151,7 @@ Quellverzeichnisse enthalten ausführbaren Code und werden bewusst konfiguriert.
 
 Der Explorer-Pfad wird als Kontext übergeben. Ein Aktionsstandard kann ihn ersetzen; der Benutzer kann das Ziel im Formular ändern. Der bestätigte Pfad wird vor dem Start geprüft und normalisiert.
 
-Bei vorhandenem Zielnamen erscheint die vereinbarte Auswahl: abbrechen, umbenennen oder vorhandenen Ordner verwenden. "Vorhandenen Ordner verwenden" ist keine pauschale Erlaubnis zum Überschreiben bestehender Dateien.
+Bei vorhandenem Zielnamen erscheint die vereinbarte Auswahl: abbrechen, umbenennen oder vorhandenen Ordner verwenden. „Vorhandenen Ordner verwenden“ ist keine pauschale Erlaubnis zum Überschreiben bestehender Dateien.
 
 Dateikonflikte müssen ohne stillen Datenverlust behandelt werden. Standardmäßig bricht die Aktion bei einem Konflikt ab oder verwendet nach ausdrücklicher Bestätigung einen neuen Namen. Überschreiben ist nur zulässig, wenn die Aktion dies ausdrücklich beschreibt, der Benutzer es vor dem Start bestätigen kann und die betroffenen Dateien eindeutig angezeigt werden.
 
@@ -153,22 +167,13 @@ Für Windows 11 wird die Einbindung in das moderne Menü über IExplorerCommand 
 
 ### Ausführungsprozess
 
-Ein separater Prozess übernimmt Formular, Vorprüfung, Zusammenfassung, Fortschritt und den Start von Windows PowerShell 5.1. Seine Dialoge erscheinen nur nach Auswahl einer Aktion. Die konkrete Technologie dieses Prozesses wird beim technischen Prototyp festgelegt.
+Ein separater Prozess übernimmt Formular, Vorprüfung, Zusammenfassung, Fortschritt und den Start von Windows PowerShell 5.1. Seine Dialoge erscheinen nur nach Auswahl einer Aktion. Die Eingabe- und Zielregeln liegen getrennt von der Fensterdarstellung, damit sie ohne WinForms prüfbar sind.
 
 ### PowerShell-Aktionen
 
-Die Aktionen führen die eigentliche Arbeit aus. SpawnNew übergibt mindestens Explorer-Kontext, bestätigten Zielpfad, Aktionsverzeichnis und Formularwerte.
+Die Aktionen führen die eigentliche Arbeit aus. SpawnNew übergibt mindestens Explorer-Kontext, bestätigten Zielpfad, Aktionsverzeichnis und Formularwerte über eine Kontextdatei.
 
-Der gemeinsame Vertrag muss vor Implementierung festlegen:
-
-- Übergabeformat für Kontext und Formularwerte,
-- Ausgabeformat für Fortschritt,
-- Ergebnisstatus,
-- Fehlerformat,
-- Liste der erstellten Ressourcen,
-- Abbruchverhalten,
-- Verhalten bei Prozessbeendigung,
-- Aufruf und Einschränkungen der Aufräumfunktion.
+Der gemeinsame Vertrag legt fest: Übergabeformat für Kontext und Formularwerte, Ausgabeformat für Fortschritt, Ergebnisstatus, Fehlerformat, Liste der erstellten Ressourcen, Abbruchverhalten, Verhalten bei Prozessbeendigung sowie Aufruf und Einschränkungen der Aufräumfunktion. Er steht in `docs/Aktionsvertrag.md`.
 
 Administratorrechte werden ausschließlich für die angeforderte Ausführung angefordert. Es gibt keinen standardmäßig erhöhten Explorer und keinen dauerhaft erhöhten Hintergrundprozess. Eine abgelehnte Rechteabfrage führt zum Abbruch ohne anschließende fachliche Änderungen.
 
@@ -176,7 +181,38 @@ Administratorrechte werden ausschließlich für die angeforderte Ausführung ang
 
 Es werden keine PowerToys-Binärdateien geändert. PowerToys-Updates überschreiben daher keine SpawnNew-Komponente. Neue Aktionen benötigen keine Neukompilierung der Explorer-Erweiterung.
 
-## 9. Fehler, Fortschritt und Aufräumen
+## 9. Sprachmodelle und Geheimnisse
+
+### Anbindung
+
+Die KI-Anbindung ist optional. Ohne konfigurierten Endpunkt fehlt den Aktionen 17 bis 19 eine Voraussetzung, sie werden mit verständlicher Meldung nicht gestartet; alle übrigen Aktionen bleiben unberührt.
+
+Angesprochen wird ein OpenAI-kompatibler Endpunkt. Damit sind lokale Laufzeiten wie Ollama und LM Studio sowie Webdienste mit demselben Schnittstellenformat über einen Weg erreichbar. Ein lokaler Endpunkt ist die Vorgabe, weil dabei kein Inhalt den Rechner verlässt; das ist für Protokolle mit Namen, Gremieninhalte und Logdateien die entscheidende Eigenschaft.
+
+Je Endpunkt werden Basis-Adresse, Modellname, Zeitlimit und optional der Name eines Geheimnisses konfiguriert. Die Auswahl des Endpunkts ist Konfiguration, keine fachliche Aktion.
+
+### Bestätigung der Ausgabe
+
+Eine Modellausgabe ist nicht deterministisch und wird nie ohne ausdrückliche Bestätigung in eine Datei geschrieben. Dafür gibt es zwei zugelassene Wege:
+
+- Der Vorschlag wird vor dem Schreiben erzeugt und erscheint in der Zusammenfassung aus Abschnitt 3 Schritt 6. Erst „Erstellen“ legt etwas an. So arbeitet Aktion 17.
+- Die Aktion schreibt eine deutlich gekennzeichnete Entwurfsdatei und meldet sie als erstellte Ressource. So arbeiten Aktionen 18 und 19.
+
+Eine Aktion darf eine vorhandene Datei nie mit Modellausgabe überschreiben, auch nicht bei bestätigter Überschreibungsregel.
+
+### Geheimnisse
+
+API-Schlüssel sind Geheimnisse und werden getrennt von Eingaben behandelt:
+
+- Sie stehen nie in der Kontextdatei, im Fortschritt, im Protokoll oder in der Zusammenfassung.
+- Sie werden benutzer- und rechnergebunden verschlüsselt im Benutzerdatenbereich abgelegt, getrennt von Programmdateien und Aktionen.
+- Die Beschreibung einer Aktion nennt unter `secrets` nur den Namen eines Geheimnisses. Die Aktion holt den Wert selbst zur Laufzeit.
+- Ein Formularfeld für ein Geheimnis wird maskiert dargestellt und nicht in die Zusammenfassung übernommen.
+- Deinstallation und Aktualisierung löschen oder überschreiben gespeicherte Geheimnisse nicht.
+
+Fehlt ein benötigtes Geheimnis, wird das wie eine fehlende Voraussetzung behandelt: verständliche Meldung, kein Start, keine automatische Einrichtung.
+
+## 10. Fehler, Fortschritt und Aufräumen
 
 - Fehler zeigen betroffenen Schritt, verständliche Ursache und technische Details bei Bedarf.
 - Fachliche Ausgaben werden im Fortschrittsfenster gesammelt; vertrauliche Eingaben gehören nicht in Protokolle.
@@ -186,9 +222,10 @@ Es werden keine PowerToys-Binärdateien geändert. PowerToys-Updates überschrei
 - Aufräumen ist keine allgemeine Transaktion und garantiert nicht, externe Änderungen vollständig rückgängig zu machen.
 - Abbrechen während der Ausführung beendet die Aktion nur, wenn der Ausführungsvertrag dies unterstützt. Andernfalls wird der Abbruch als angefordert angezeigt, bis der Prozess beendet ist.
 - Eine Prozessbeendigung darf nicht als erfolgreicher Rollback dargestellt werden.
-- Nach einem Abbruch oder Fehler wird eindeutig zwischen "keine Änderungen", "teilweise erstellt", "erfolgreich erstellt" und "Status unbekannt" unterschieden.
+- Nach einem Abbruch oder Fehler wird eindeutig zwischen „keine Änderungen“, „teilweise erstellt“, „erfolgreich erstellt“ und „Status unbekannt“ unterschieden.
+- Ein nicht erreichbarer oder zu langsamer Modellendpunkt ist ein gewöhnlicher Fehler mit Schritt, Ursache und Zeitlimit in der Meldung.
 
-## 10. Installation und Wartung
+## 11. Installation und Wartung
 
 Installationsumfang: aktueller Benutzer oder alle Benutzer. Eine systemweite Installation benötigt administrative Rechte. Eine Benutzerinstallation darf ohne Administratorrechte erfolgen, sofern die gewählte Registrierungsart dies unterstützt; andernfalls wird die erforderliche Rechteanforderung vor der Installation angezeigt.
 
@@ -197,20 +234,20 @@ Für Installation und Aktualisierung wird jeweils ein konfigurierter Einzeiler b
 - SpawnNew installieren
 - SpawnNew aktualisieren
 
-Vor der Ausführung zeigt SpawnNew den vollständigen Einzeiler, das Ziel und die erforderlichen Rechte an. Die Ausführung erfolgt erst nach ausdrücklicher Bestätigung. Einzeiler dürfen keine persönlichen Aktionen, Quellen oder Konfigurationen verändern oder löschen. Fehler werden mit dem ausgeführten Befehl, dem Rückgabestatus und verständlichen Details angezeigt.
+Vor der Ausführung zeigt SpawnNew den vollständigen Einzeiler, das Ziel und die erforderlichen Rechte an. Die Ausführung erfolgt erst nach ausdrücklicher Bestätigung. Einzeiler dürfen keine persönlichen Aktionen, Quellen, Konfigurationen oder Geheimnisse verändern oder löschen. Fehler werden mit dem ausgeführten Befehl, dem Rückgabestatus und verständlichen Details angezeigt.
 
-Konfiguration und persönliche Aktionen werden von installierten Programmdateien getrennt. Ein SpawnNew-Update darf diese nicht überschreiben. Deinstallation entfernt die Menüregistrierung und SpawnNew-eigene Programmdateien; benutzereigene Aktionen, Quellen und Konfiguration bleiben standardmäßig erhalten. Der Benutzer muss vor der Deinstallation ausdrücklich über verbleibende Daten informiert werden.
+Konfiguration, persönliche Aktionen und Geheimnisse werden von installierten Programmdateien getrennt. Ein SpawnNew-Update darf diese nicht überschreiben. Deinstallation entfernt die Menüregistrierung und SpawnNew-eigene Programmdateien; benutzereigene Aktionen, Quellen, Konfiguration und Geheimnisse bleiben standardmäßig erhalten. Der Benutzer muss vor der Deinstallation ausdrücklich über verbleibende Daten informiert werden.
 
-Eine Möglichkeit zur Quellenkonfiguration muss ohne eigenständigen Aktionsstarter erreichbar sein, beispielsweise über einen separaten Konfigurationsbefehl im SpawnNew-Untermenü oder über die installierte Anwendung. Die gewählte Darstellung und ihre Rechteanforderungen werden vor Implementierung festgelegt.
+Eine Möglichkeit zur Quellen- und Endpunktkonfiguration muss ohne eigenständigen Aktionsstarter erreichbar sein, beispielsweise über einen separaten Konfigurationsbefehl im SpawnNew-Untermenü oder über die installierte Anwendung. Die gewählte Darstellung und ihre Rechteanforderungen werden vor Implementierung festgelegt.
 
-## 11. Entwicklungsregeln
+## 12. Entwicklungsregeln
 
 - Minimaler, funktionaler Code; Windows-native APIs bevorzugen.
 - Bestehende Dateinamen beibehalten; Implementierungsdateinamen vor dem ersten Code festlegen.
 - Jede selbst erstellte Text-/Codedatei beginnt mit einem passenden Kommentar mit Dateiname und Version. Für JSON ein Format ohne Kommentare verwenden und die Version als Metadatum führen; keine ungültige JSON-Syntax einbauen.
-- Höchstens 800 Zeilen pro Datei.
+- Höchstens 800 Zeilen und 20 kB pro Codedatei.
 - Kompatibel mit deutschem Windows und Windows PowerShell 5.1.
-- Skripte bei Bedarf als UTF-8 mit BOM ausliefern.
+- Skripte als UTF-8 mit BOM ausliefern; Austauschdateien zwischen Prozessen als UTF-8 ohne BOM.
 - Keine Unicode-Emojis; Umlaute in Texten und Pfaden korrekt unterstützen.
 - Dateien bei Änderungen vollständig neu schreiben und Namen beibehalten.
 - Bei Fehlerbehebungen nur das konkrete Problem ändern.
@@ -218,12 +255,14 @@ Eine Möglichkeit zur Quellenkonfiguration muss ohne eigenständigen Aktionsstar
 - Aktionsskripte dürfen keine nicht dokumentierten globalen Seiteneffekte ausführen.
 - Eingaben und Pfade müssen getrennt von ausführbarem Code übergeben werden.
 - Installations- und Aktualisierungseinzeiler müssen dokumentiert, überprüfbar und vor der Ausführung bestätigungspflichtig sein.
+- Regeln ohne Fensterdarstellung umsetzen, damit sie ohne WinForms prüfbar sind.
+- Jeder Baustein wird zusammen mit seinen Tests geliefert.
 
-## 12. Abnahme
+## 13. Abnahme
 
 1. SpawnNew erscheint direkt im ersten Kontextmenü unter Windows 10 und Windows 11, sofern die unterstützte Windows-Version die dafür festgelegte Registrierung unterstützt.
 2. Neue Skripte und Aktionsordner erscheinen ohne Neubau der Anwendung.
-3. Genau sieben mitgelieferte Startaktionen funktionieren; zusätzliche benutzerdefinierte Aktionen werden getrennt davon geladen.
+3. Genau elf mitgelieferte Startaktionen funktionieren; zusätzliche benutzerdefinierte Aktionen werden getrennt davon geladen.
 4. Persönliche Aktionen ersetzen gemeinsame ausschließlich anhand derselben expliziten ID und gemäß der festgelegten Quellenpriorität.
 5. Formulare unterstützen Standardzielpfade, Änderungen und eine abschließende Zusammenfassung.
 6. Fehlende Voraussetzungen führen zu einer verständlichen Meldung ohne automatische Installation.
@@ -231,37 +270,56 @@ Eine Möglichkeit zur Quellenkonfiguration muss ohne eigenständigen Aktionsstar
 8. Normale Aktionen lösen keine Rechteabfrage aus; deklarierte erhöhte Aktionen behandeln Zustimmung und Ablehnung korrekt.
 9. Bestehende Dateien werden nicht still überschrieben; Fehler und Teilergebnisse sind sichtbar.
 10. Nicht erreichbare Quellen blockieren Explorer nicht dauerhaft und überschreiten das festgelegte Zeitlimit nicht.
-11. Markdown- und Word-kompatible Ausgabe sowie eigene Dokumentvorlagen funktionieren ohne vorausgesetzte Word-Automatisierung für die reine Dateierzeugung.
-12. Installieren, Aktualisieren und Deinstallieren erhalten persönliche Aktionen und Konfiguration entsprechend den festgelegten Regeln.
+11. Markdown- und Word-kompatible Ausgabe sowie eigene Dokumentvorlagen funktionieren ohne vorausgesetzte Word-Automatisierung für die reine Dateierzeugung; Platzhalter werden auch im Inhalt einer `.docx` ersetzt.
+12. Installieren, Aktualisieren und Deinstallieren erhalten persönliche Aktionen, Konfiguration und Geheimnisse entsprechend den festgelegten Regeln.
 13. Die Menüeinträge für Installation und Aktualisierung zeigen den Einzeiler vor der Ausführung an und führen ihn erst nach ausdrücklicher Bestätigung aus.
 14. Eine zwischen Menüanzeige und Ausführung geänderte oder entfernte Aktion wird nicht blind ausgeführt.
 15. Abbruch, Prozessbeendigung und Aufräumen unterscheiden zuverlässig zwischen keinem Ergebnis, Teilergebnis, Erfolg und unbekanntem Status.
-16. Die sieben mitgelieferten Aktionen verwenden eindeutige explizite IDs und sind in der Quellenauflösung nicht versehentlich durch automatisch erzeugte IDs ersetzbar.
+16. Die elf mitgelieferten Aktionen verwenden eindeutige explizite IDs und sind in der Quellenauflösung nicht versehentlich durch automatisch erzeugte IDs ersetzbar.
+17. Eine Vorlage mit deklarierten NTFS-Rechten erzeugt die Rechte tatsächlich und erbt sie nicht stillschweigend vom Elternordner.
+18. Mit lokalem Endpunkt erzeugt eine KI-Aktion keinen Netzzugriff nach außen.
+19. Ein API-Schlüssel erscheint zu keinem Zeitpunkt in Kontextdatei, Fortschritt, Protokoll oder Zusammenfassung.
+20. Der Vorschlag von Aktion 17 erscheint in der Zusammenfassung; Abbrechen legt nichts an.
+21. Die Aktionen 18 und 19 schreiben nur gekennzeichnete Entwurfsdateien und überschreiben keine vorhandene Datei.
+22. Fehlt der konfigurierte Endpunkt oder ein benötigtes Geheimnis, meldet die Anwendung das verständlich und startet nicht; alle übrigen Aktionen bleiben nutzbar.
+23. Das Öffnen des Kontextmenüs löst keinen Netzzugriff und keinen Modellaufruf aus.
 
-## 13. Umsetzungsschritte
+## 14. Umsetzungsschritte
 
-1. Dateinamen, Konfigurationsspeicher, Quellenpriorität, Aktions-ID-Regeln, Installations- und Aktualisierungseinzeiler sowie technische Schnittstellenverträge festlegen.
-2. Minimalen Explorer-Prototyp auf Windows 10 und Windows 11 prüfen, einschließlich Menüregistrierung, direkter Anzeige und Pfadübergabe.
-3. Aktionsquellen, Prioritätsauflösung, IDs, Nachladen, Cache-Verhalten und Beschreibungsprüfung umsetzen.
-4. Einheitliche Formulare, Zusammenfassung und getrennten PowerShell-Start umsetzen.
-5. Fortschritt, Fehlerbehandlung, Rechte und optionale Aufräumfunktion ergänzen.
-6. Sieben ausgewählte Aktionen und Dokumentvorlagen liefern.
-7. Installation, Aktualisierung, Konfigurationszugriff und Deinstallation umsetzen.
-8. Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus und Fehleranzeige integrieren.
-9. Abnahmekriterien auf Windows 10 und Windows 11 mit erreichbaren und nicht erreichbaren Quellen prüfen.
+| Schritt | Inhalt | Stand |
+|---|---|---|
+| 1 | Dateinamen, Konfigurationsspeicher, Quellenpriorität, Aktions-ID-Regeln, Einzeiler, Schnittstellenverträge festlegen | fertig |
+| 2 | Minimalen Explorer-Prototyp auf Windows 10 und 11 prüfen: Menüregistrierung, direkte Anzeige, Pfadübergabe | offen |
+| 3 | Aktionsquellen, Prioritätsauflösung, IDs, Nachladen, Cache-Verhalten, Beschreibungsprüfung | fertig und geprüft |
+| 4 | Einheitliche Formulare, Zusammenfassung, getrennter PowerShell-Start | fertig; WinForms auf Windows noch nicht erprobt |
+| 5 | Fortschritt, Fehlerbehandlung, Rechte, optionale Aufräumfunktion | fertig; WinForms auf Windows noch nicht erprobt |
+| 6 | Dokumenterzeugung mit Platzhaltern in Markdown und `.docx` | offen |
+| 7 | KI-Anbindung Stufe 1: lokaler OpenAI-kompatibler Endpunkt, Voraussetzungsprüfung, Aktionen 17 bis 19 | offen |
+| 8 | KI-Anbindung Stufe 2: Webendpunkt mit verschlüsselt gespeichertem Schlüssel | offen |
+| 9 | NTFS-Rechte aus der Vorlage setzen | offen |
+| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | offen |
+| 11 | Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | offen |
+| 12 | Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus, Fehleranzeige | offen |
+| 13 | Abnahmekriterien auf Windows 10 und 11 mit erreichbaren und nicht erreichbaren Quellen prüfen | offen |
 
-Die Erstellung dieses Konzepts umfasst noch keine Implementierung, Installation oder Veröffentlichung.
+## 15. Name und Marktlage
 
-## 14. Quellen und Namensstand
+Der Name SpawnNew ist ein Arbeitsname. Zwei Websuchen zeigten Verwendungen als Funktion, Befehl oder Startparameter, aber kein eindeutig identifiziertes eigenständiges Produkt gleichen Namens. Eine verbindliche Marken- oder Domainfreigabe liegt nicht vor.
 
-Der Name SpawnNew ist als Arbeitsname gewählt. Die vorangegangene Websuche zeigte Verwendungen als Funktion, Befehl oder Startparameter, aber kein eindeutig identifiziertes eigenständiges Produkt gleichen Namens. Eine verbindliche Marken- oder Domainfreigabe liegt nicht vor.
+Recherche zur Abgrenzung, Stand 26.10.2026. Alle Angaben aus Sekundärquellen; `learn.microsoft.com` war beim Prüfen nicht erreichbar.
 
-Zur Architektur untersuchte PowerToys-Dateien auf dem veränderlichen main-Branch:
+| Werkzeug | Deckt ab | Deckt nicht ab |
+|---|---|---|
+| PowerToys New+ | Datei- und Ordnervorlagen im Kontextmenü, Variablen wie `$YYYY` und Elternordnername im Namen, ein Vorlagenpfad, optional OneDrive | Benutzer nach Werten fragen, Skripte ausführen, mehrere priorisierte Quellen, Platzhalter im Dateiinhalt, NTFS-Rechte. Die Anfrage nach einer Eingabe beim Anlegen wurde mit Verweis auf die Variablen geschlossen |
+| DirTemplateExtension | Rechtsklick, Ordner einer Vorlagensammlung als Menüeinträge | Eingaben, Skripte, NTFS-Rechte |
+| FolderCrafter | Ordnerbäume aus Textdefinition, Presets | erste Menüebene, Eingabeformular, Skripte |
+| TortoiseGit | `Git Create Repository here`, bare oder normal | Gitignore-Vorlage, README, erster Commit in einem Schritt |
+| DirCreator | Struktur mit Gruppen und ACLs | Kontextmenü |
+| PSCommander | Kontextmenüeinträge, die PowerShell mit dem angeklickten Pfad ausführen | kostenpflichtige Lizenz, kein Quellen- und Vorlagenmodell, kein Formular- und Fortschrittsvertrag |
+| Windows 11 AI actions | KI-Aktionen im Explorer für Bilder und einige Dokumenttypen | Copilot+-Hardware, Insider-Kanal, M365- und Copilot-Lizenz nötig; keine eigenen Prompts, kein eigenes Modell, kein Windows 10. Berichten zufolge nimmt Microsoft ab Mitte November 2026 acht dieser Aktionen aus dem Kontextmenü heraus |
+| Ollama, LM Studio | lokale Modelle über OpenAI-kompatible Endpunkte | keine Explorer-Integration |
+| ContextHelper | eigene Prompts, eigene Schlüssel, lokale Endpunkte | Chrome-Erweiterung, kein Explorer |
 
-- Menüaufbau
-- Klick auf Vorlage
-- Zielpfad und Kopierablauf
-- Datei-/Ordnerkopie
-- Windows-10-Menühandler
+Kein gefundenes Werkzeug verbindet Explorer-Kontextmenü, beliebigen Dateityp, eigene Prompts, eigenes Modell lokal oder im Web und Windows 10. Genau diese Verbindung ist die Begründung für SpawnNew; reine Ordner- und Dateivorlagen deckt PowerToys New+ kostenlos ab.
 
-Diese Stellen dienen als Architekturbezug. SpawnNew soll als eigenständige Erweiterung entstehen.
+Zur Architektur untersuchte PowerToys-Dateien auf dem veränderlichen main-Branch: Menüaufbau, Klick auf Vorlage, Zielpfad und Kopierablauf, Datei-/Ordnerkopie, Windows-10-Menühandler. Diese Stellen dienen als Architekturbezug. SpawnNew entsteht als eigenständige Erweiterung.

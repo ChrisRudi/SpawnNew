@@ -13,6 +13,7 @@ README.md                               Kurzuebersicht, Build, Lint
 docs/Dateiliste.md                      diese Datei
 docs/Aktionsvertrag.md                  Ausfuehrungsvertrag der PowerShell-Aktionen
 config/spawnnew.settings.default.json   mitgelieferte Standardkonfiguration
+src/Install-SpawnNew.ps1                Installation, Aktualisierung, Deinstallation
 src/Host/                               Ausfuehrungsprozess, Windows PowerShell 5.1
 src/Explorer/                           native Explorer-Erweiterung, C++
 src/Actions/                            die sieben mitgelieferten Aktionen
@@ -33,6 +34,9 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 | `SpawnNew.Progress.psm1` | Fortschrittsfenster, Abbruchanforderung, Abschlussbericht |
 | `SpawnNew.Runner.psm1` | Laufverzeichnis, Kontextdatei, Argumente, Prozessstart, Fortschritt lesen, Ergebnis und Status |
 | `SpawnNew.Document.psm1` | Erzeugung von Markdown- und `.docx`-Dateien ohne Word-Automatisierung |
+| `SpawnNew.Register.psm1` | Registrierungseintraege des Kontextmenues aus dem Katalog bilden, schreiben und entfernen |
+| `SpawnNew.Llm.psm1` | OpenAI-kompatibler Client fuer lokale und Webendpunkte, geplant |
+| `SpawnNew.Secret.psm1` | Geheimnisse benutzer- und rechnergebunden speichern und lesen, geplant |
 | `SpawnNew.Catalog.ps1` | Konsolen-Einstiegspunkt: schreibt den aufgeloesten Katalog als JSON fuer die Explorer-Erweiterung |
 
 ## 3. Explorer-Erweiterung (`src/Explorer/`)
@@ -61,6 +65,10 @@ Je Aktion ein Ordner mit `action.json` und `Invoke-SpawnAction.ps1`.
 | `Fehleranalyse` | `spawnnew.incident` | 10 |
 | `Sitzung` | `spawnnew.meeting` | 11 |
 | `EigeneAktion` | `spawnnew.customaction` | 14 |
+| `ProjektAbschliessen` | `spawnnew.closeout` | 15 |
+| `StrukturAusBeschreibung` | `spawnnew.structurefromtext` | 17 |
+| `DateiZusammenfassen` | `spawnnew.summarizefile` | 18 |
+| `OrdnerDokumentieren` | `spawnnew.documentfolder` | 19 |
 
 ## 5. Werkzeuge (`tools/`)
 
@@ -110,6 +118,7 @@ darum nur auf Windows ausfuehrbar. Die Regeln dahinter stehen bewusst in
 | Maschinenkonfiguration | entfaellt | `%PROGRAMDATA%\SpawnNew\spawnnew.settings.json` |
 | Persoenliche Aktionen | `%LOCALAPPDATA%\SpawnNew\Actions` | dieselbe Datei je Benutzer |
 | Metadaten-Cache | `%LOCALAPPDATA%\SpawnNew\Cache` | dieselbe Datei je Benutzer |
+| Geheimnisse | `%LOCALAPPDATA%\SpawnNew\Secrets` | dieselbe Datei je Benutzer |
 | Diagnoseprotokoll | `%LOCALAPPDATA%\SpawnNew\Logs` | dieselbe Datei je Benutzer |
 
 Programmdateien und Benutzerdaten liegen getrennt. Ein Update schreibt
@@ -141,6 +150,12 @@ diese Angaben in `action.json` aus:
 | `supportsCancel` | `true`, `false` | `false` | Die Aktion prueft die Abbruchdatei zwischen Schritten |
 | `allowsOverwrite` | `true`, `false` | `false` | Ueberschreiben darf nach Bestaetigung angeboten werden |
 | `targetKind` | `folder`, `inPlace` | `folder` | `folder` bildet den Zielpfad aus Basisverzeichnis und dem Feld `name`; `inPlace` arbeitet im Basisverzeichnis selbst |
+| `secrets` | Liste von Namen | leer | Benoetigte Geheimnisse, nur mit Namen, nie mit Wert |
+| `permissions` | Liste von Regeln | leer | NTFS-Rechte je Ordner der Vorlage, geplant |
+
+Arten in `prerequisites`: `command` (Get-Command), `module` (Get-Module -ListAvailable),
+`file` (relativ zum Aktionsverzeichnis), `endpoint` (HTTP-Erreichbarkeit mit Zeitlimit,
+geplant fuer die KI-Anbindung).
 
 Feldtypen in `fields`: `text`, `multiline`, `date`, `choice`, `bool`. Ein
 unbekannter Typ gilt als `text` und wird als Diagnose erfasst. Ein Feld ohne
@@ -200,7 +215,34 @@ erreichbar, Beschreibung lesbar und gueltig, Einstiegspunkt vorhanden,
 Aktions-ID unveraendert. Ein Eintrag aus dem Metadaten-Cache gilt dabei
 immer als nicht geprueft und wird nicht gestartet.
 
-## 13. Installations- und Aktualisierungseinzeiler
+## 13. Registrierung des Kontextmenues
+
+Erste testbare Stufe ohne Compiler, deshalb reine Registrierung statt DLL:
+
+```
+<Wurzel>\Directory\Background\shell\SpawnNew
+    (Default)   = "SpawnNew"
+    SubCommands = ""
+<Wurzel>\Directory\Background\shell\SpawnNew\shell\<NN>_<id>
+    (Default)   = "<Titel>"
+<Wurzel>\Directory\Background\shell\SpawnNew\shell\<NN>_<id>\command
+    (Default)   = powershell.exe -NoProfile -WindowStyle Hidden
+                  -ExecutionPolicy Bypass -File "<App>\SpawnNew.Host.ps1"
+                  -ActionId <id> -ExplorerPath "%V"
+```
+
+Wurzel ist `HKCU:\Software\Classes` bei Benutzerinstallation und
+`HKLM:\Software\Classes` bei Systeminstallation. `SubCommands` als leere
+Zeichenkette plus `shell`-Unterschlüssel erzeugt das Untermenü. Die
+Unterschlüssel werden alphabetisch sortiert, darum der Zahlenpräfix.
+
+Diese Stufe zeigt SpawnNew unter Windows 10 in der ersten Menüebene, unter
+Windows 11 erst unter "Weitere Optionen anzeigen". Die direkte Anzeige unter
+Windows 11 verlangt `IExplorerCommand` und bleibt Umsetzungsschritt 2. Die
+Einträge entstehen bei der Installation aus dem Katalog; dynamisches
+Nachladen beim Öffnen des Menüs kommt erst mit der DLL.
+
+## 14. Installations- und Aktualisierungseinzeiler
 
 Beide stehen in der Konfiguration unter `install` und `update` und werden
 vor der Ausfuehrung vollstaendig angezeigt. Vorgabe:
@@ -213,7 +255,7 @@ update:  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<App>\Install-
 `Install-SpawnNew.ps1` schreibt ausschliesslich unter `App` und in die
 Menuregistrierung.
 
-## 14. Encoding
+## 15. Encoding
 
 | Dateiart | Encoding |
 |---|---|
