@@ -253,7 +253,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { ... }"
 ```
 
 Der Einzeiler laedt das Archiv des main-Branch nach `%TEMP%`, entpackt es und
-ruft `src\Install-SpawnNew.ps1` auf. TLS 1.2 wird ausdruecklich gesetzt, weil
+ruft `src\Install-SpawnNew.ps1` auf. Er setzt anonymen Lesezugriff voraus und
+laeuft daher nur bei einem oeffentlichen Repository; bei einem privaten
+Repository ist der Weg ueber `git clone` oder ein lokales Verzeichnis zu
+konfigurieren. TLS 1.2 wird ausdruecklich gesetzt, weil
 Windows PowerShell 5.1 sonst je nach System eine aeltere Fassung aushandelt.
 
 `Install-SpawnNew.ps1` kopiert `src\Host\*` und `src\Actions` in das

@@ -8,30 +8,54 @@ und Windows 11. Anforderungen und Abnahmekriterien stehen in
 
 ## Installieren und testen
 
-Ein Befehl in Windows PowerShell 5.1, ohne Administratorrechte:
+Das Repository ist **privat**. Der Einzeiler, der das Archiv aus dem Netz
+laedt, braucht anonymen Lesezugriff und laeuft darum erst, wenn das
+Repository oeffentlich ist. Fuer den Test bis dahin die beiden folgenden Wege.
+
+### Aus einem Klon, ein Befehl
+
+Braucht Git fuer Windows. Beim ersten Mal fragt der Git Credential Manager
+nach der Anmeldung.
 
 ```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser }"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { $dir = Join-Path $env:TEMP 'spawnnew'; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; git clone --depth 1 https://github.com/ChrisRudi/SpawnNew $dir; & (Join-Path $dir 'src\Install-SpawnNew.ps1') -Scope CurrentUser }"
 ```
 
-Danach Rechtsklick in den leeren Bereich eines Ordners, dann **SpawnNew**.
-Unter Windows 11 zuerst **Weitere Optionen anzeigen** — die direkte Anzeige
-in der ersten Menueebene verlangt `IExplorerCommand` und ist noch offen.
+### Aus einem lokalen Ordner
 
-Entfernen, Benutzerdaten bleiben erhalten:
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser -Uninstall }"
-```
-
-Aus einem Klon statt aus dem Netz:
+Repository auf die Testmaschine kopieren, dann im Projektordner:
 
 ```
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\src\Install-SpawnNew.ps1 -Scope CurrentUser
 ```
 
+Entfernen, Benutzerdaten bleiben erhalten:
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\src\Install-SpawnNew.ps1 -Scope CurrentUser -Uninstall
+```
+
 `-Scope AllUsers` installiert fuer alle Benutzer und braucht
 Administratorrechte. Erneutes Ausfuehren wirkt als Aktualisierung.
+
+### Aus dem Netz, sobald das Repository oeffentlich ist
+
+Dieser Einzeiler steht auch in `config/spawnnew.settings.default.json` unter
+`install` und `update` und wird spaeter aus dem Menue angeboten.
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser }"
+```
+
+Entfernen:
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = Join-Path $env:TEMP 'spawnnew.zip'; $dir = Join-Path $env:TEMP 'spawnnew'; Invoke-WebRequest -Uri 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive -Path $zip -DestinationPath $dir -Force; & (Join-Path $dir 'SpawnNew-main\src\Install-SpawnNew.ps1') -Scope CurrentUser -Uninstall }"
+```
+
+Danach Rechtsklick in den leeren Bereich eines Ordners, dann **SpawnNew**.
+Unter Windows 11 zuerst **Weitere Optionen anzeigen** — die direkte Anzeige
+in der ersten Menueebene verlangt `IExplorerCommand` und ist noch offen.
 
 ### Was der erste Test zeigen soll
 
