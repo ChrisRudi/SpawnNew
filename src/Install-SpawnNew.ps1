@@ -99,6 +99,14 @@ if ($problems.Count -gt 0) {
 }
 
 Write-Output ''
+
+if (@($catalog.Actions).Count -eq 0) {
+    Write-Output 'ACHTUNG: Es wurde keine Aktion registriert. Das Untermenue SpawnNew erscheint,'
+    Write-Output 'bleibt aber leer. Die Hinweise oben nennen den Grund. Zur Eingrenzung:'
+    Write-Output ('  & "' + (Join-Path $appDirectory 'SpawnNew.Diagnose.ps1') + '"')
+    exit 1
+}
+
 Write-Output 'Fertig. Rechtsklick in den leeren Bereich eines Ordners, dann SpawnNew.'
 Write-Output 'Unter Windows 11 zuerst "Weitere Optionen anzeigen".'
 exit 0

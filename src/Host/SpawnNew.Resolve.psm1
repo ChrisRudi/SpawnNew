@@ -129,6 +129,10 @@ function Invoke-SpawnNewSourceScan {
     laesst sich nicht abbrechen. Nach Ablauf des Zeitlimits wird der Runspace
     zum Stoppen angestossen und nicht weiter abgewartet, damit das
     Kontextmenue nicht haengt.
+
+    Runspace und Modulimport laufen vor der Zeitmessung. Sie haengen nicht an
+    der Quelle, und ihr Aufwand haette sonst das Zeitlimit aufgebraucht,
+    bevor die Quelle ueberhaupt angefasst wird.
     #>
     [CmdletBinding()]
     param(
@@ -139,9 +143,8 @@ function Invoke-SpawnNewSourceScan {
     )
 
     $worker = {
-        param($ModulePath, $Source, $MaxDepth)
+        param($Source, $MaxDepth)
 
-        Import-Module $ModulePath -Force
         $diagnostics = New-Object System.Collections.ArrayList
         $scan = Get-SpawnNewSourceScan -Source $Source -MaxDepth $MaxDepth -Diagnostics $diagnostics
 
@@ -153,8 +156,13 @@ function Invoke-SpawnNewSourceScan {
     }
 
     $shell = [powershell]::Create()
-    [void]$shell.AddScript($worker)
+
+    [void]$shell.AddScript('param($ModulePath) Import-Module $ModulePath')
     [void]$shell.AddArgument($CatalogModulePath)
+    [void]$shell.Invoke()
+    $shell.Commands.Clear()
+
+    [void]$shell.AddScript($worker)
     [void]$shell.AddArgument($Source)
     [void]$shell.AddArgument($MaxDepth)
 

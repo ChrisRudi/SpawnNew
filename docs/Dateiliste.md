@@ -38,6 +38,7 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 | `SpawnNew.Llm.psm1` | OpenAI-kompatibler Client fuer lokale und Webendpunkte, geplant |
 | `SpawnNew.Secret.psm1` | Geheimnisse benutzer- und rechnergebunden speichern und lesen, geplant |
 | `SpawnNew.Catalog.ps1` | Konsolen-Einstiegspunkt: schreibt den aufgeloesten Katalog als JSON fuer die Explorer-Erweiterung |
+| `SpawnNew.Diagnose.ps1` | Konsolen-Einstiegspunkt: Schichten, Quellen, Zeitverhalten, Katalog, Diagnosen und Registrierung anzeigen |
 
 ## 3. Explorer-Erweiterung (`src/Explorer/`)
 

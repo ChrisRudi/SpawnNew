@@ -57,7 +57,19 @@ laufen. Die Aktionen selbst startet SpawnNew immer mit `powershell.exe`,
 also mit Windows PowerShell 5.1.
 
 Der Installer nennt am Ende, wie viele Aktionen registriert wurden und aus
-welcher Quelle. Steht dort `0`, nennen die Hinweiszeilen den Grund.
+welcher Quelle. Steht dort `0`, endet er mit Rueckgabewert 1: das Untermenue
+erscheint dann, bleibt aber leer.
+
+### Wenn etwas fehlt
+
+```
+& "$env:LOCALAPPDATA\SpawnNew\App\SpawnNew.Diagnose.ps1"
+```
+
+Zeigt Konfigurationsschichten, Quellen und ihre Erreichbarkeit, das
+Zeitverhalten der Quellenerkennung, den aufgeloesten Katalog, alle Diagnosen
+und die tatsaechlich geschriebenen Registrierungseintraege samt Befehlszeile.
+Aendert nichts.
 
 ### Was der erste Test zeigen soll
 
