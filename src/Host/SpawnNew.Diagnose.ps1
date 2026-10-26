@@ -86,10 +86,29 @@ foreach ($scope in @('CurrentUser', 'AllUsers')) {
 
     $keys = @(Get-ChildItem -LiteralPath $sub)
     Write-Output ('    ' + $keys.Count + ' Eintrag/Eintraege')
+
     foreach ($key in $keys) {
-        $command = (Get-ItemProperty -LiteralPath (Join-Path $key.PSPath 'command') -ErrorAction SilentlyContinue).'(default)'
         Write-Output ('    ' + $key.PSChildName)
-        Write-Output ('      ' + $command)
+        Write-Output ('      MUIVerb : ' + $key.GetValue('MUIVerb'))
+
+        $commandKey = Get-Item -LiteralPath (Join-Path $key.PSPath 'command') -ErrorAction SilentlyContinue
+        if ($null -eq $commandKey) {
+            Write-Output '      Befehl  : kein command-Unterschluessel'
+            continue
+        }
+
+        # GetValue('') liest den unbenannten Standardwert. Nur den liest die
+        # Shell. Ein Wert, der woertlich '(default)' heisst, ist ein Rest der
+        # Fassung, die New-ItemProperty dafuer verwendet hat.
+        Write-Output ('      Befehl  : ' + $commandKey.GetValue(''))
+        if ($commandKey.GetValueNames() -contains '(default)') {
+            Write-Output '      ACHTUNG : Wert namens (default) vorhanden. Den liest die Shell nicht.'
+        }
+    }
+
+    $menuKey = Get-Item -LiteralPath $menu
+    if ($menuKey.GetValueNames() -contains '(default)') {
+        Write-Output '    ACHTUNG: Menueschluessel hat einen Wert namens (default). Rest einer aelteren Fassung.'
     }
 }
 

@@ -3,6 +3,11 @@
 # Zweck  : Die Registrierungseintraege fuer das SpawnNew-Untermenue aus dem
 #          Katalog bilden, schreiben und entfernen. Aufbau siehe
 #          docs/Dateiliste.md Abschnitt 13.
+#          Anzeigetexte stehen in MUIVerb, also in benannten Werten. Nur die
+#          Befehlszeile muss der unbenannte Standardwert ihres Schluessels
+#          sein; der wird mit Set-Item geschrieben. New-ItemProperty mit dem
+#          Namen '(default)' legt dagegen einen Wert an, der woertlich
+#          '(default)' heisst, und den liest die Shell nicht.
 # Input  : Aktionen aus Get-SpawnNewCatalog, Programmverzeichnis, Umfang.
 # Output : Get-SpawnNewRegistryEntry liefert die Eintraege als Daten, damit
 #          sie ohne Schreibzugriff pruefbar sind.
@@ -90,16 +95,16 @@ function Get-SpawnNewRegistryEntry {
     $menu    = Get-SpawnNewMenuKey -Root $Root
     $entries = New-Object System.Collections.ArrayList
 
-    [void]$entries.Add([pscustomobject]@{ Path = $menu; Name = '(default)'; Value = $script:MenuName })
-    [void]$entries.Add([pscustomobject]@{ Path = $menu; Name = 'SubCommands'; Value = '' })
+    [void]$entries.Add([pscustomobject]@{ Path = $menu; Kind = 'value'; Name = 'MUIVerb'; Value = $script:MenuName })
+    [void]$entries.Add([pscustomobject]@{ Path = $menu; Kind = 'value'; Name = 'SubCommands'; Value = '' })
 
     $index = 1
     foreach ($entry in $Action) {
         $key = $menu + '\shell\' + (Get-SpawnNewKeyName -Index $index -Id $entry.Id)
         $command = Get-SpawnNewActionCommand -AppDirectory $AppDirectory -ActionId $entry.Id
 
-        [void]$entries.Add([pscustomobject]@{ Path = $key; Name = '(default)'; Value = $entry.Title })
-        [void]$entries.Add([pscustomobject]@{ Path = ($key + '\command'); Name = '(default)'; Value = $command })
+        [void]$entries.Add([pscustomobject]@{ Path = $key; Kind = 'value'; Name = 'MUIVerb'; Value = $entry.Title })
+        [void]$entries.Add([pscustomobject]@{ Path = ($key + '\command'); Kind = 'default'; Name = ''; Value = $command })
         $index++
     }
 
@@ -110,6 +115,9 @@ function Set-SpawnNewRegistration {
     <#
     .SYNOPSIS
     Schreibt die Eintraege in die Registrierung.
+    .DESCRIPTION
+    Kind 'default' setzt den unbenannten Standardwert des Schluessels ueber
+    Set-Item. Kind 'value' schreibt einen benannten Wert.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param([Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Entry)
@@ -120,7 +128,13 @@ function Set-SpawnNewRegistration {
         if (-not (Test-Path -LiteralPath $item.Path)) {
             [void](New-Item -Path $item.Path -Force)
         }
-        [void](New-ItemProperty -Path $item.Path -Name $item.Name -Value $item.Value -PropertyType String -Force)
+
+        if ($item.Kind -eq 'default') {
+            Set-Item -LiteralPath $item.Path -Value $item.Value
+        }
+        else {
+            [void](New-ItemProperty -Path $item.Path -Name $item.Name -Value $item.Value -PropertyType String -Force)
+        }
     }
 }
 

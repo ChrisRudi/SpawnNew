@@ -81,6 +81,10 @@ Import-Module (Join-Path $appDirectory 'SpawnNew.Resolve.psm1') -Force -ErrorAct
 $config  = Get-SpawnNewConfig -AppDirectory $appDirectory
 $catalog = Get-SpawnNewCatalog -Config $config
 
+# Erst entfernen, dann frisch schreiben: so verschwinden Eintraege von
+# Aktionen, die es nicht mehr gibt, und Reste aelterer Fassungen.
+Remove-SpawnNewRegistration -Root $root
+
 $entries = Get-SpawnNewRegistryEntry -Action $catalog.Actions -AppDirectory $appDirectory -Root $root
 Set-SpawnNewRegistration -Entry $entries
 

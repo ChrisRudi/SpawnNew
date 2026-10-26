@@ -222,15 +222,30 @@ Erste testbare Stufe ohne Compiler, deshalb reine Registrierung statt DLL:
 
 ```
 <Wurzel>\Directory\Background\shell\SpawnNew
-    (Default)   = "SpawnNew"
+    MUIVerb     = "SpawnNew"
     SubCommands = ""
 <Wurzel>\Directory\Background\shell\SpawnNew\shell\<NN>_<id>
-    (Default)   = "<Titel>"
+    MUIVerb     = "<Titel>"
 <Wurzel>\Directory\Background\shell\SpawnNew\shell\<NN>_<id>\command
-    (Default)   = powershell.exe -NoProfile -WindowStyle Hidden
+    <Standard>  = powershell.exe -NoProfile -WindowStyle Hidden
                   -ExecutionPolicy Bypass -File "<App>\SpawnNew.Host.ps1"
                   -ActionId <id> -ExplorerPath "%V"
 ```
+
+Anzeigetexte stehen in `MUIVerb`, also in benannten Werten. Unbenannter
+Standardwert ist nur die Befehlszeile. Das hat einen handfesten Grund:
+`New-ItemProperty -Name '(default)'` legt einen Wert an, der woertlich
+`(default)` heisst, und den liest die Shell nicht. Der Standardwert eines
+Schluessels wird mit `Set-Item -LiteralPath <Schluessel> -Value <Text>`
+geschrieben. Je weniger Standardwerte noetig sind, desto kleiner die
+Angriffsflaeche fuer diesen Fehler.
+
+Fehlt der Anzeigetext, zeigt der Explorer den Schluesselnamen. Ein Eintrag
+ist dadurch im schlechtesten Fall haesslich, aber nicht unsichtbar.
+
+Eine Neuregistrierung entfernt zuerst den gesamten `SpawnNew`-Schluessel und
+schreibt dann frisch. So verschwinden Eintraege von Aktionen, die es nicht
+mehr gibt, und Reste aelterer Fassungen.
 
 Wurzel ist `HKCU:\Software\Classes` bei Benutzerinstallation und
 `HKLM:\Software\Classes` bei Systeminstallation. `SubCommands` als leere

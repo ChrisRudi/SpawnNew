@@ -29,19 +29,34 @@ Add-SpawnNewTest 'Menueschluessel liegt unter Directory Background shell' {
     Confirm-SpawnNewMatch -Label 'Pfad' -Actual $key -Pattern 'Directory.Background.shell.SpawnNew$'
 }
 
-Add-SpawnNewTest 'Untermenue entsteht aus Standardwert und leerem SubCommands' {
+Add-SpawnNewTest 'Untermenue entsteht aus MUIVerb und leerem SubCommands' {
     $entries = Get-TestEntry
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $entries.Count -Expected 2
+    Confirm-SpawnNewValue -Label 'Anzeigename ueber MUIVerb' -Actual $entries[0].Name -Expected 'MUIVerb'
     Confirm-SpawnNewValue -Label 'Name' -Actual $entries[0].Value -Expected 'SpawnNew'
     Confirm-SpawnNewValue -Label 'SubCommands' -Actual $entries[1].Name -Expected 'SubCommands'
     Confirm-SpawnNewValue -Label 'leer' -Actual $entries[1].Value -Expected ''
+}
+
+Add-SpawnNewTest 'Nur die Befehlszeile ist ein unbenannter Standardwert' {
+    $entries = Get-TestEntry -Action @((Get-TestAction -Id 'spawnnew.folderstructure' -Title 'Ordnerstruktur'))
+
+    $standard = @($entries | Where-Object { $_.Kind -eq 'default' })
+    Confirm-SpawnNewValue -Label 'Anzahl Standardwerte' -Actual $standard.Count -Expected 1
+    Confirm-SpawnNewMatch -Label 'liegt unter command' -Actual $standard[0].Path -Pattern 'command$'
+    Confirm-SpawnNewMatch -Label 'ist die Befehlszeile' -Actual $standard[0].Value -Pattern 'SpawnNew\.Host\.ps1'
+
+    $benannt = @($entries | Where-Object { $_.Kind -eq 'value' })
+    Confirm-SpawnNewValue -Label 'Anzahl benannte Werte' -Actual $benannt.Count -Expected 3
+    Confirm-SpawnNewValue -Label 'kein Wert heisst (default)' -Actual @($benannt | Where-Object { $_.Name -eq '(default)' }).Count -Expected 0
 }
 
 Add-SpawnNewTest 'Je Aktion entstehen Titel und Befehl' {
     $entries = Get-TestEntry -Action @((Get-TestAction -Id 'spawnnew.folderstructure' -Title 'Ordnerstruktur'))
 
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $entries.Count -Expected 4
+    Confirm-SpawnNewValue -Label 'Titel ueber MUIVerb' -Actual $entries[2].Name -Expected 'MUIVerb'
     Confirm-SpawnNewValue -Label 'Titel' -Actual $entries[2].Value -Expected 'Ordnerstruktur'
     Confirm-SpawnNewMatch -Label 'Schluessel' -Actual $entries[2].Path -Pattern 'shell.01_spawnnew\.folderstructure$'
     Confirm-SpawnNewMatch -Label 'Befehlsschluessel' -Actual $entries[3].Path -Pattern 'command$'
