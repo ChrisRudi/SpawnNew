@@ -27,9 +27,11 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 | `SpawnNew.Config.psm1` | Konfigurationsschichten laden, Umgebungsvariablen aufloesen, Quellenliste normalisieren |
 | `SpawnNew.Catalog.psm1` | Quellen abtasten, Aktions-IDs bilden, Beschreibungen pruefen |
 | `SpawnNew.Resolve.psm1` | Quellen mit Zeitlimit abtasten, Metadaten-Cache, Prioritaet aufloesen, Nachpruefung vor der Ausfuehrung |
-| `SpawnNew.Form.psm1` | Einheitliches Eingabeformular und Zusammenfassung, WinForms |
-| `SpawnNew.Progress.psm1` | Fortschrittsfenster, Fehlerdetails, optionales Oeffnen des Zielordners |
-| `SpawnNew.Runner.psm1` | Start von `powershell.exe`, Vertrag, Rechteanforderung, Abbruch, Aufraeumen |
+| `SpawnNew.Input.psm1` | Formularfelder normalisieren, Vorbelegungen, Eingaben pruefen. Ohne WinForms, damit pruefbar |
+| `SpawnNew.Target.psm1` | Namen und Zielpfade pruefen, Zielart, Zielzustand, freier Name, Voraussetzungen, Zusammenfassungstext. Ohne WinForms |
+| `SpawnNew.Form.psm1` | Eingabeformular, Konfliktfrage, Zusammenfassung und Meldungen als WinForms-Fenster |
+| `SpawnNew.Progress.psm1` | Fortschrittsfenster, Abbruchanforderung, Abschlussbericht |
+| `SpawnNew.Runner.psm1` | Laufverzeichnis, Kontextdatei, Argumente, Prozessstart, Fortschritt lesen, Ergebnis und Status |
 | `SpawnNew.Document.psm1` | Erzeugung von Markdown- und `.docx`-Dateien ohne Word-Automatisierung |
 | `SpawnNew.Catalog.ps1` | Konsolen-Einstiegspunkt: schreibt den aufgeloesten Katalog als JSON fuer die Explorer-Erweiterung |
 
@@ -67,6 +69,35 @@ Je Aktion ein Ordner mit `action.json` und `Invoke-SpawnAction.ps1`.
 | `Install-DevTools.ps1` | Richtet PowerShell 7 und PSScriptAnalyzer fuer die Pruefung ein |
 | `Invoke-Lint.ps1` | PSScriptAnalyzer gegen das Windows-PowerShell-5.1-Profil |
 | `PSScriptAnalyzerSettings.psd1` | Regelsatz und Zielprofil |
+| `SpawnNew.Test.psm1` | Minimaler Testlaeufer: Testfaelle anmelden, Zusicherungen, Arbeitsverzeichnis je Fall |
+| `Invoke-Test.ps1` | Fuehrt `tests/*.Tests.ps1` aus |
+
+Kein externes Testframework: die PowerShell Gallery ist nicht in jeder
+Umgebung erreichbar, Pester 5 liegt nicht als Release-Paket auf github.com,
+und Windows PowerShell 5.1 bringt nur das syntaktisch inkompatible Pester 3.4
+mit. Der Laeufer kommt ohne Installationsschritt.
+
+## 5a. Tests (`tests/`)
+
+Je geprueftem Baustein eine Datei `<Baustein>.Tests.ps1`. Jeder Testfall
+erhaelt ein eigenes leeres Arbeitsverzeichnis; `LOCALAPPDATA` zeigt waehrend
+des Falls dorthin, damit Cache und Protokolle den Entwicklerrechner nicht
+beschreiben.
+
+| Datei | Prueft |
+|---|---|
+| `SpawnNew.Test.Tests.ps1` | den Testlaeufer selbst |
+| `SpawnNew.Config.Tests.ps1` | Konfigurationsschichten, Quellenpriorietaet, Entdoppelung |
+| `SpawnNew.Catalog.Tests.ps1` | Aktionserkennung, Aktions-IDs, Beschreibungspruefung |
+| `SpawnNew.Resolve.Tests.ps1` | Prioritaet, Zeitlimit, Cache, Nachpruefung |
+| `SpawnNew.Input.Tests.ps1` | Feldnormalisierung und Eingabepruefung |
+| `SpawnNew.Target.Tests.ps1` | Namen, Zielpfade, Konflikte, Voraussetzungen, Zusammenfassung |
+| `SpawnNew.Runner.Tests.ps1` | Kontextdatei, Argumente, Fortschritt, Ergebnis, Status, Aufraeumangebot |
+| `SpawnNew.CatalogCli.Tests.ps1` | die JSON-Ausgabe fuer die Explorer-Erweiterung |
+
+`SpawnNew.Form.psm1` und `SpawnNew.Progress.psm1` laden WinForms und sind
+darum nur auf Windows ausfuehrbar. Die Regeln dahinter stehen bewusst in
+`SpawnNew.Input.psm1` und `SpawnNew.Target.psm1` und sind dort geprueft.
 
 ## 6. Installierte Ablage auf dem Zielsystem
 
@@ -100,7 +131,23 @@ anhand des normalisierten Pfades entdoppelt; der erste Treffer gewinnt. So
 kann eine Benutzerkonfiguration eine Quelle ergaenzen, ohne die
 mitgelieferten Quellen zu wiederholen.
 
-## 8. Aktions-ID
+## 8. Ergaenzungen am Beschreibungsformat
+
+Ueber den Entwurf in `SpawnNew.md` Abschnitt 5 hinaus wertet die Umsetzung
+diese Angaben in `action.json` aus:
+
+| Angabe | Werte | Vorgabe | Zweck |
+|---|---|---|---|
+| `supportsCancel` | `true`, `false` | `false` | Die Aktion prueft die Abbruchdatei zwischen Schritten |
+| `allowsOverwrite` | `true`, `false` | `false` | Ueberschreiben darf nach Bestaetigung angeboten werden |
+| `targetKind` | `folder`, `inPlace` | `folder` | `folder` bildet den Zielpfad aus Basisverzeichnis und dem Feld `name`; `inPlace` arbeitet im Basisverzeichnis selbst |
+
+Feldtypen in `fields`: `text`, `multiline`, `date`, `choice`, `bool`. Ein
+unbekannter Typ gilt als `text` und wird als Diagnose erfasst. Ein Feld ohne
+`name` und ein `choice`-Feld ohne `choices` werden uebersprungen. `default`
+mit dem Wert `today` belegt ein Datumsfeld mit dem heutigen Tag vor.
+
+## 9. Aktions-ID
 
 Explizite ID aus `action.json`, Feld `id`:
 
@@ -121,7 +168,7 @@ dafuer eine Sonderbehandlung noetig ist. Zwei automatische IDs kollidieren
 nur bei identischer Quelle und identischem relativem Pfad, was nicht
 auftreten kann.
 
-## 9. Quellenpriorität
+## 10. Quellenpriorität
 
 Sortierschluessel in dieser Reihenfolge:
 
@@ -133,7 +180,7 @@ Sortierschluessel in dieser Reihenfolge:
 Anschliessend gewinnt bei gleicher expliziter ID die zuerst einsortierte
 Quelle. Die unterlegene Aktion wird als Diagnose erfasst, nicht angezeigt.
 
-## 10. Aktionserkennung in einer Quelle
+## 11. Aktionserkennung in einer Quelle
 
 Abtasten bis zu drei Ebenen tief ab dem Quellenwurzelverzeichnis.
 
@@ -146,14 +193,14 @@ Abtasten bis zu drei Ebenen tief ab dem Quellenwurzelverzeichnis.
 In ein erkanntes Aktionsverzeichnis wird nicht weiter abgestiegen. Interne
 Hilfsskripte erscheinen dadurch nicht als eigene Menueaktionen.
 
-## 11. Nachpruefung vor der Ausfuehrung
+## 12. Nachpruefung vor der Ausfuehrung
 
 `Test-SpawnNewAction` prueft unmittelbar vor dem Start erneut: Quelle
 erreichbar, Beschreibung lesbar und gueltig, Einstiegspunkt vorhanden,
 Aktions-ID unveraendert. Ein Eintrag aus dem Metadaten-Cache gilt dabei
 immer als nicht geprueft und wird nicht gestartet.
 
-## 12. Installations- und Aktualisierungseinzeiler
+## 13. Installations- und Aktualisierungseinzeiler
 
 Beide stehen in der Konfiguration unter `install` und `update` und werden
 vor der Ausfuehrung vollstaendig angezeigt. Vorgabe:
@@ -166,7 +213,7 @@ update:  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<App>\Install-
 `Install-SpawnNew.ps1` schreibt ausschliesslich unter `App` und in die
 Menuregistrierung.
 
-## 13. Encoding
+## 14. Encoding
 
 | Dateiart | Encoding |
 |---|---|

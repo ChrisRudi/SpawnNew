@@ -1,4 +1,4 @@
-# tools/Invoke-Lint.ps1
+﻿# tools/Invoke-Lint.ps1
 # Version 1.1 | Prueft allen PowerShell-Code von SpawnNew.
 # Zweck  : PSScriptAnalyzer ueber src/ und tools/ laufen lassen.
 # Input  : -Path (optional) einzelne Dateien oder Ordner; -Severity Mindeststufe.
@@ -21,7 +21,7 @@ $settings   = Join-Path $PSScriptRoot 'PSScriptAnalyzerSettings.psd1'
 $extensions = @('.ps1', '.psm1', '.psd1')
 
 if (-not $Path) {
-    $Path = @((Join-Path $repoRoot 'src'), (Join-Path $repoRoot 'tools'))
+    $Path = @((Join-Path $repoRoot 'src'), (Join-Path $repoRoot 'tools'), (Join-Path $repoRoot 'tests'))
 }
 
 $existing = @($Path | Where-Object { Test-Path -LiteralPath $_ })

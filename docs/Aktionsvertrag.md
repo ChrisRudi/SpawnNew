@@ -1,4 +1,4 @@
-<!-- docs/Aktionsvertrag.md | Version 1.0 | 26.10.2026 -->
+<!-- docs/Aktionsvertrag.md | Version 1.1 | 26.10.2026 -->
 
 # Ausfuehrungsvertrag der PowerShell-Aktionen
 
@@ -54,6 +54,17 @@ gelesen.
 | `conflictPolicy` | `fail`, `rename` oder `overwrite`. Gilt fuer Dateien im Zielpfad |
 | `fields` | Formularwerte, Schluessel sind die Feldnamen aus `action.json` |
 | `cancelFile` | Pfad. Existiert die Datei, hat der Benutzer Abbruch angefordert |
+| `culture` | Kultur des Ausfuehrungsprozesses, etwa `de-DE` |
+
+`targetPath` entsteht je nach `targetKind` der Aktion: bei `folder` aus dem
+bestaetigten Basisverzeichnis und dem Feld `name`, bei `inPlace` aus dem
+Basisverzeichnis selbst. Die Angaben `targetKind`, `supportsCancel` und
+`allowsOverwrite` sowie die zulaessigen Feldtypen stehen in
+`docs/Dateiliste.md` Abschnitt 8.
+
+Werte in `fields` sind bereits geprueft und normalisiert: Zeichenketten ohne
+fuehrenden und folgenden Leerraum, Datumsangaben als `yyyy-MM-dd`,
+Wahrheitswerte als echte JSON-Wahrheitswerte, Auswahlwerte aus `choices`.
 
 `conflictPolicy` ist nie `overwrite`, wenn die Aktion das Ueberschreiben
 nicht in `action.json` ueber `allowsOverwrite: true` ausdruecklich anbietet
@@ -63,7 +74,11 @@ und der Benutzer es in der Zusammenfassung bestaetigt hat.
 
 Die Aktion haengt Zeilen an `progressFile` an. Eine Zeile ist ein
 JSON-Objekt, UTF-8 ohne BOM, Zeilenende `CRLF`. Der Ausfuehrungsprozess
-liest die Datei mit und zeigt sie im Fortschrittsfenster.
+liest die Datei alle 250 ms ab der letzten Leseposition mit und zeigt sie im
+Fortschrittsfenster. Ausgewertet werden nur vollstaendige Zeilen; eine halb
+geschriebene Zeile wird beim naechsten Durchgang gelesen. Eine Zeile, die
+keine gueltige JSON ist, wird uebersprungen. Ein unbekannter `type` gilt als
+`info`, ein `percent` ausserhalb von 0 bis 100 wird geklemmt.
 
 | `type` | Weitere Felder | Bedeutung |
 |---|---|---|
@@ -131,7 +146,9 @@ schreibt `status: "cancelled"`.
 
 Bei `false` zeigt der Ausfuehrungsprozess den Abbruch als angefordert an und
 wartet auf das Ende des Prozesses. Der Ausfuehrungsprozess beendet den
-Aktionsprozess nicht von sich aus.
+Aktionsprozess nicht von sich aus. Die Abbruchdatei wird in beiden Faellen
+angelegt, damit eine Aktion sie auch dann auswerten kann, wenn sie den
+Abbruch nicht deklariert hat.
 
 ## 7. Prozessbeendigung
 
@@ -151,6 +168,10 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass
                -File "<cleanup>" -ContextFile "<Kontext-JSON>"
                                  -ResultFile  "<Ergebnis-JSON der Aktion>"
 ```
+
+Das Aufraeumen wird nur angeboten, wenn die Aktion `cleanup` nennt, der
+Status `partial`, `cancelled`, `failed` oder `unknown` lautet und mindestens
+eine Ressource erstellt wurde. Der Benutzer bestaetigt es ausdruecklich.
 
 Das Aufraeumskript darf ausschliesslich Ressourcen entfernen, die in
 `created` der Ergebnisdatei oder im Fortschritt stehen. Es schreibt eine

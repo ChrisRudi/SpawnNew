@@ -184,6 +184,7 @@ function ConvertTo-SpawnNewActionEntry {
         SupportsCancel  = (Get-SpawnNewBoolProperty -InputObject $Description -Name 'supportsCancel' -Default $false)
         AllowsOverwrite = (Get-SpawnNewBoolProperty -InputObject $Description -Name 'allowsOverwrite' -Default $false)
         DefaultTarget   = (Get-SpawnNewStringProperty -InputObject $Description -Name 'defaultTarget' -Default '')
+        TargetKind      = (Get-SpawnNewStringProperty -InputObject $Description -Name 'targetKind' -Default 'folder')
         Fields          = $fields
         Prerequisites   = $prerequisites
         PlannedSteps    = $plannedSteps
