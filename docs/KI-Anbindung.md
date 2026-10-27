@@ -50,7 +50,7 @@ Damit gehen Ollama, LM Studio und Webdienste mit diesem Format.
 | `secret` | nein | Name des Geheimnisses mit dem API-Schluessel |
 
 Mitgeliefert ist nur der lokale Endpunkt fuer Ollama. Eigene Endpunkte
-gehoeren in `%LOCALAPPDATA%\SpawnNew\spawnnew.settings.json`; ein Eintrag
+gehoeren in `spawnnew.settings.json` im Datenverzeichnis, bei einer Installation im Cloudordner also dort und damit fuer alle Rechner; ein Eintrag
 gleichen Namens ersetzt den mitgelieferten. **SpawnNew konfigurieren >
 Einstellungen bearbeiten** legt die Datei an und oeffnet sie.
 
@@ -74,7 +74,7 @@ Geheimnis, bricht die Aktion vor der ersten Aenderung ab.
 
 ## 4. Geheimnisse
 
-- Gespeichert unter `%LOCALAPPDATA%\SpawnNew\Secrets\<Name>.secret`,
+- Gespeichert unter `%LOCALAPPDATA%\SpawnNew\Secrets\<Name>.secret`, auch bei einer Installation im Cloudordner immer lokal und darum auf jedem Rechner einmal zu speichern,
   verschluesselt mit DPAPI fuer den aktuellen Benutzer. Die Maschinenkennung
   geht als zusaetzliche Entropie ein; eine kopierte Datei laesst sich auf
   einem anderen Rechner nicht entschluesseln.

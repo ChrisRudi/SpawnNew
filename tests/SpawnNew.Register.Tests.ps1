@@ -140,3 +140,29 @@ Add-SpawnNewTest 'Abgleich schreibt nur bei Abweichung und entfernt Altlasten' {
         Remove-Item -LiteralPath (Split-Path -Parent $root) -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+Add-SpawnNewTest 'Programmverzeichnis wird aus der Befehlszeile gelesen' {
+    $line = Get-SpawnNewActionCommand -AppDirectory 'G:\Meine Ablage\SpawnNew\App' -ActionId 'spawnnew.a'
+    Confirm-SpawnNewValue -Label 'Aktion' -Actual (ConvertFrom-SpawnNewCommandLine -Line $line) -Expected 'G:\Meine Ablage\SpawnNew\App'
+
+    $line = Get-SpawnNewManagementCommand -AppDirectory 'C:\Users\x\OneDrive\SpawnNew\App' -Name 'configure'
+    Confirm-SpawnNewValue -Label 'Befehl' -Actual (ConvertFrom-SpawnNewCommandLine -Line $line) -Expected 'C:\Users\x\OneDrive\SpawnNew\App'
+    Confirm-SpawnNewValue -Label 'fremd' -Actual (ConvertFrom-SpawnNewCommandLine -Line 'notepad.exe "%1"') -Expected ''
+}
+
+Add-SpawnNewTest 'Cloudordner gilt als Benutzerinstallation' {
+    Confirm-SpawnNewValue -Label 'OneDrive' -Actual (Get-SpawnNewInstallScope -AppDirectory 'C:\Users\x\OneDrive\SpawnNew\App') -Expected 'CurrentUser'
+    Confirm-SpawnNewValue -Label 'Google Drive' -Actual (Get-SpawnNewInstallScope -AppDirectory 'G:\Meine Ablage\SpawnNew\App') -Expected 'CurrentUser'
+}
+
+Add-SpawnNewTest 'Registriertes Programmverzeichnis wird aus der Registrierung gelesen' {
+    $root = 'HKCU:\Software\SpawnNewTest\' + [guid]::NewGuid().ToString('N')
+    try {
+        Confirm-SpawnNewValue -Label 'leer' -Actual (Get-SpawnNewRegisteredAppDirectory -Root $root) -Expected ''
+        Set-SpawnNewRegistration -Entry @(Get-SpawnNewRegistryEntry -Action @([pscustomobject]@{ Id = 'spawnnew.a'; Title = 'A' }) -AppDirectory 'D:\Cloud\SpawnNew\App' -Root $root)
+        Confirm-SpawnNewValue -Label 'gelesen' -Actual (Get-SpawnNewRegisteredAppDirectory -Root $root) -Expected 'D:\Cloud\SpawnNew\App'
+    }
+    finally {
+        Remove-Item -LiteralPath (Split-Path -Parent $root) -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}

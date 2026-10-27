@@ -31,7 +31,9 @@ function Get-SpawnNewSettingsReport {
 
     $lines = New-Object System.Collections.ArrayList
     [void]$lines.Add('Programmverzeichnis: ' + $AppDirectory)
-    [void]$lines.Add('Benutzerdaten:       ' + (Get-SpawnNewDataDirectory))
+    $mode = if (Test-SpawnNewPortable -AppDirectory $AppDirectory) { 'Cloudordner, auf allen Rechnern gleich' } else { 'lokal' }
+    [void]$lines.Add('Datenverzeichnis:    ' + (Get-SpawnNewDataDirectory -AppDirectory $AppDirectory) + '  (' + $mode + ')')
+    [void]$lines.Add('Nur dieser Rechner:  ' + (Get-SpawnNewLocalDirectory) + '  (Geheimnisse, Cache, Protokolle)')
     [void]$lines.Add('')
     [void]$lines.Add('Konfigurationsschichten, die erste gewinnt:')
     foreach ($layer in @($Config.LayerPath)) {

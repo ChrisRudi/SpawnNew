@@ -46,5 +46,5 @@ Add-SpawnNewTest 'Anfuehrungszeichen im Namen ergeben gueltige JSON' {
 
 Add-SpawnNewTest 'Standardziel ist das persoenliche Aktionsverzeichnis' {
     $description = ConvertFrom-Json ([System.IO.File]::ReadAllText((Join-Path (Join-Path (Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'src') 'Actions') 'EigeneAktion') 'action.json')))
-    Confirm-SpawnNewValue -Label 'Ziel' -Actual $description.defaultTarget -Expected '%LOCALAPPDATA%\SpawnNew\Actions'
+    Confirm-SpawnNewValue -Label 'Ziel' -Actual $description.defaultTarget -Expected '%SPAWNNEW_DATA%\Actions'
 }

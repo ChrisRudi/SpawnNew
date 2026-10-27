@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "configVersion": "1.2",
-  "comment": "config/spawnnew.settings.default.json - mitgelieferte Standardkonfiguration. Benutzerwerte gehoeren nach %LOCALAPPDATA%\\SpawnNew\\spawnnew.settings.json und werden nie von einem Update ueberschrieben.",
+  "configVersion": "1.3",
+  "comment": "config/spawnnew.settings.default.json - mitgelieferte Standardkonfiguration. Benutzerwerte gehoeren nach spawnnew.settings.json im Datenverzeichnis (Cloudordner oder %LOCALAPPDATA%\\SpawnNew) und werden nie von einem Update ueberschrieben.",
   "sourceTimeoutMs": 1500,
   "cacheMaxAgeMinutes": 1440,
   "scanDepth": 3,
@@ -19,7 +19,7 @@
   "sources": [
     {
       "name": "Persoenliche Aktionen",
-      "path": "%LOCALAPPDATA%\\SpawnNew\\Actions",
+      "path": "%SPAWNNEW_DATA%\\Actions",
       "scope": "personal",
       "order": 100
     },

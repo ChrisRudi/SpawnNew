@@ -158,3 +158,40 @@ Add-SpawnNewTest 'Einzeiler ohne Befehl bleibt leer' {
 
     Confirm-SpawnNewValue -Label 'Installationsbefehl' -Actual $config.Install -Expected $null
 }
+
+Add-SpawnNewTest 'Ohne Markierung liegt das Datenverzeichnis lokal' {
+    $app = Join-Path (Get-SpawnNewTestDirectory) 'App'
+    [void](New-Item -ItemType Directory -Path $app -Force)
+
+    Confirm-SpawnNewValue -Label 'Daten' -Actual (Get-SpawnNewDataDirectory -AppDirectory $app) -Expected (Join-Path $env:LOCALAPPDATA 'SpawnNew')
+    Confirm-SpawnNewValue -Label 'portabel' -Actual (Test-SpawnNewPortable -AppDirectory $app) -Expected $false
+}
+
+Add-SpawnNewTest 'Markierung im Cloudordner zeigt relativ auf das Datenverzeichnis' {
+    $cloud = Join-Path (Get-SpawnNewTestDirectory) 'OneDrive - Schule\SpawnNew'
+    $app = Join-Path $cloud 'App'
+    [void](Add-SpawnNewTestFile -Path (Join-Path $app 'spawnnew.portable.json') -Content '{ "schemaVersion": 1, "dataDirectory": ".." }')
+
+    Confirm-SpawnNewValue -Label 'Daten' -Actual (Get-SpawnNewDataDirectory -AppDirectory $app) -Expected $cloud
+    Confirm-SpawnNewValue -Label 'portabel' -Actual (Test-SpawnNewPortable -AppDirectory $app) -Expected $true
+    Confirm-SpawnNewValue -Label 'Platzhalter' -Actual (Expand-SpawnNewPath -Path '%SPAWNNEW_DATA%\Actions' -AppDirectory $app) -Expected (Join-Path $cloud 'Actions')
+    Confirm-SpawnNewValue -Label 'Benutzerschicht' -Actual (Get-SpawnNewConfigLayerPath -AppDirectory $app)[0] -Expected (Join-Path $cloud 'spawnnew.settings.json')
+    Confirm-SpawnNewValue -Label 'lokal bleibt lokal' -Actual (Get-SpawnNewLocalDirectory) -Expected (Join-Path $env:LOCALAPPDATA 'SpawnNew')
+}
+
+Add-SpawnNewTest 'Mitgelieferte Konfiguration legt persoenliche Aktionen ins Datenverzeichnis' {
+    $cloud = Join-Path (Get-SpawnNewTestDirectory) 'Cloud'
+    $app = Join-Path $cloud 'App'
+    [void](Add-SpawnNewTestFile -Path (Join-Path $app 'spawnnew.portable.json') -Content '{ "dataDirectory": ".." }')
+    Copy-Item -LiteralPath (Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'config') 'spawnnew.settings.default.json') -Destination $app
+
+    $config = Get-SpawnNewConfig -AppDirectory $app
+    $personal = @($config.Sources | Where-Object { $_.Scope -eq 'personal' })[0]
+    Confirm-SpawnNewValue -Label 'persoenlich' -Actual $personal.Path -Expected (Join-Path $cloud 'Actions')
+}
+
+Add-SpawnNewTest 'Unlesbare Markierung faellt auf das lokale Verzeichnis zurueck' {
+    $app = Join-Path (Get-SpawnNewTestDirectory) 'App'
+    [void](Add-SpawnNewTestFile -Path (Join-Path $app 'spawnnew.portable.json') -Content 'kaputt')
+    Confirm-SpawnNewValue -Label 'Daten' -Actual (Get-SpawnNewDataDirectory -AppDirectory $app) -Expected (Join-Path $env:LOCALAPPDATA 'SpawnNew')
+}

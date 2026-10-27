@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Diagnose.ps1
-# Version 1.0 | Zeigt, warum das Kontextmenue leer bleibt.
+# Version 1.1 | Zeigt, warum das Kontextmenue leer bleibt.
 # Zweck  : Konfigurationsschichten, Quellen, Zeitverhalten, Katalog,
 #          Diagnosen und die tatsaechlichen Registrierungseintraege ausgeben.
 # Input  : -AppDirectory abweichendes Programmverzeichnis.
@@ -20,6 +20,8 @@ foreach ($name in @('Config', 'Catalog', 'Resolve', 'Register')) {
 }
 
 Write-Output ('Programmverzeichnis : ' + $AppDirectory)
+Write-Output ('Datenverzeichnis    : ' + (Get-SpawnNewDataDirectory -AppDirectory $AppDirectory) + $(if (Test-SpawnNewPortable -AppDirectory $AppDirectory) { '  (Cloudordner)' } else { '  (lokal)' }))
+Write-Output ('Nur dieser Rechner  : ' + (Get-SpawnNewLocalDirectory))
 Write-Output ('PowerShell          : ' + $PSVersionTable.PSVersion.ToString())
 Write-Output ('Betriebssystem      : ' + [System.Environment]::OSVersion.VersionString)
 

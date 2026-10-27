@@ -26,7 +26,7 @@ function Get-SpawnNewCacheFilePath {
     [OutputType([string])]
     param([Parameter(Mandatory)]$Source)
 
-    $directory = Join-Path (Get-SpawnNewDataDirectory) 'Cache'
+    $directory = Join-Path (Get-SpawnNewLocalDirectory) 'Cache'
     return (Join-Path $directory ((Get-SpawnNewShortHash -Text $Source.Key) + '.json'))
 }
 

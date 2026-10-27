@@ -1,4 +1,4 @@
-<!-- docs/Dateiliste.md | Version 1.2 | 26.10.2026 -->
+<!-- docs/Dateiliste.md | Version 1.3 | 26.10.2026 -->
 
 # Dateiliste und Festlegungen
 
@@ -29,6 +29,7 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 |---|---|
 | `SpawnNew.Host.ps1` | Einstiegspunkt einer Aktion. Nimmt Aktions-ID und Explorer-Pfad, fuehrt Nachpruefung, Formular, Vorschlag, Zusammenfassung, Start und Fortschritt aus |
 | `SpawnNew.Command.ps1` | Einstiegspunkt der Verwaltungsbefehle `configure`, `update`, `install` |
+| `SpawnNew.Menu.ps1` | Einstiegspunkt: Menue auf diesem Rechner fuer genau dieses Programmverzeichnis einrichten oder mit `-Remove` entfernen; fuer weitere Rechner bei einer Installation im Cloudordner |
 | `SpawnNew.Catalog.ps1` | Konsolen-Einstiegspunkt: schreibt den aufgeloesten Katalog als JSON fuer die Explorer-Erweiterung |
 | `SpawnNew.Diagnose.ps1` | Konsolen-Einstiegspunkt: Schichten, Quellen, Zeitverhalten, Katalog, Diagnosen und Registrierung anzeigen |
 | `SpawnNew.Config.psm1` | Konfigurationsschichten laden, Umgebungsvariablen aufloesen, Quellen und KI-Endpunkte normalisieren |
@@ -174,28 +175,49 @@ braucht keine Rechte.
 
 ## 6. Installierte Ablage auf dem Zielsystem
 
-| Zweck | Benutzerinstallation | Systeminstallation |
-|---|---|---|
-| Programmdateien | `%LOCALAPPDATA%\SpawnNew\App` | `%PROGRAMFILES%\SpawnNew\App` |
-| Mitgelieferte Aktionen | `%LOCALAPPDATA%\SpawnNew\App\Actions` | `%PROGRAMFILES%\SpawnNew\App\Actions` |
-| Standardkonfiguration | `%LOCALAPPDATA%\SpawnNew\App\spawnnew.settings.default.json` | `%PROGRAMFILES%\SpawnNew\App\spawnnew.settings.default.json` |
-| Benutzerkonfiguration | `%LOCALAPPDATA%\SpawnNew\spawnnew.settings.json` | dieselbe Datei je Benutzer |
-| Maschinenkonfiguration | entfaellt | `%PROGRAMDATA%\SpawnNew\spawnnew.settings.json` |
-| Persoenliche Aktionen | `%LOCALAPPDATA%\SpawnNew\Actions` | dieselbe Datei je Benutzer |
-| Eigene Dokumentvorlagen | `%LOCALAPPDATA%\SpawnNew\Vorlagen\<Aktions-ID>` | dieselbe Datei je Benutzer |
-| Metadaten-Cache | `%LOCALAPPDATA%\SpawnNew\Cache` | dieselbe Datei je Benutzer |
-| Geheimnisse | `%LOCALAPPDATA%\SpawnNew\Secrets` | dieselbe Datei je Benutzer |
-| Protokolle | `%LOCALAPPDATA%\SpawnNew\Logs\host.log`, `command.log` | dieselbe Datei je Benutzer |
+Drei Arten der Installation. `<Daten>` ist das Datenverzeichnis, `<Lokal>`
+immer `%LOCALAPPDATA%\SpawnNew`.
+
+| Zweck | Cloudordner (`-Path`) | lokal fuer einen Benutzer | fuer alle Benutzer |
+|---|---|---|---|
+| Programmdateien | `<Cloud>\App` | `<Lokal>\App` | `%PROGRAMFILES%\SpawnNew\App` |
+| Datenverzeichnis `<Daten>` | `<Cloud>` | `<Lokal>` | `<Lokal>` |
+| Benutzerkonfiguration | `<Daten>\spawnnew.settings.json` | dto. | dto. |
+| Persoenliche Aktionen | `<Daten>\Actions` | dto. | dto. |
+| Eigene Dokumentvorlagen | `<Daten>\Vorlagen\<Aktions-ID>` | dto. | dto. |
+| Maschinenkonfiguration | `%PROGRAMDATA%\SpawnNew\spawnnew.settings.json` | dto. | dto. |
+| Geheimnisse | `<Lokal>\Secrets` | dto. | dto. |
+| Metadaten-Cache | `<Lokal>\Cache` | dto. | dto. |
+| Protokolle | `<Lokal>\Logs\host.log`, `command.log` | dto. | dto. |
+| Menue | Registrierung je Rechner, `HKCU` | `HKCU` | `HKLM` |
+
+Im Cloudordner liegen ausserdem `SpawnNew einrichten.cmd` und
+`SpawnNew auf diesem Rechner entfernen.cmd`; beide rufen
+`App\SpawnNew.Menu.ps1` auf.
+
+Das Datenverzeichnis bestimmt `Get-SpawnNewDataDirectory`: Liegt im
+Programmverzeichnis `spawnnew.portable.json` mit
+`"dataDirectory": ".."`, gilt dieser Pfad relativ zum
+Programmverzeichnis, sonst `<Lokal>`. Weil die Angabe relativ ist, findet
+jeder Rechner seinen eigenen Pfad des Cloudordners, auch bei anderem
+Benutzernamen oder Laufwerksbuchstaben. In Konfiguration und
+`defaultTarget` steht `%SPAWNNEW_DATA%` fuer das Datenverzeichnis.
+
+Geheimnisse, Cache und Protokolle bleiben bewusst lokal: DPAPI bindet
+Geheimnisse an Benutzer und Rechner, und Cache und Protokolle wuerden
+zwischen Rechnern Synchronisationskonflikte erzeugen.
 
 Programmdateien und Benutzerdaten liegen getrennt. Ein Update schreibt
-ausschliesslich unter `App`. Deinstallation entfernt `App` und die
-Menueregistrierung; alle Benutzerdaten bleiben erhalten.
+ausschliesslich unter `App`. Deinstallation entfernt die Menueregistrierung,
+bei lokaler Installation auch `App`; im Cloudordner bleibt `App` fuer die
+anderen Rechner stehen, ausser mit `-RemoveFiles`. Benutzerdaten bleiben
+immer erhalten.
 
 ## 7. Konfigurationsschichten
 
 Reihenfolge der Auswertung:
 
-1. `%LOCALAPPDATA%\SpawnNew\spawnnew.settings.json`
+1. `<Daten>\spawnnew.settings.json` (Abschnitt 6)
 2. `%PROGRAMDATA%\SpawnNew\spawnnew.settings.json`
 3. `<Programmdateien>\spawnnew.settings.default.json`
 
@@ -331,8 +353,12 @@ Bis zur DLL entsteht das Menue nicht beim Oeffnen. Der Ausfuehrungsprozess
 gleicht es darum bei jedem Aufruf mit dem Katalog ab und schreibt es bei
 einer Abweichung neu; eine neue persoenliche Aktion erscheint so nach dem
 naechsten Aufruf eines SpawnNew-Eintrags, sofort ueber **SpawnNew
-konfigurieren > Menue neu einlesen**. Das gilt fuer Benutzerinstallationen;
-eine Systeminstallation braucht dafuer Administratorrechte.
+konfigurieren > Menue neu einlesen**. Der Abgleich laeuft nur, wenn das
+registrierte Menue auf genau dieses Programmverzeichnis zeigt
+(`Get-SpawnNewRegisteredAppDirectory`), damit zwei Installationen sich nicht
+gegenseitig ueberschreiben. Eine Systeminstallation unter
+`%PROGRAMFILES%` braucht dafuer Administratorrechte; lokal und im
+Cloudordner gilt die Benutzerinstallation.
 
 Diese Stufe zeigt SpawnNew unter Windows 10 in der ersten Menueebene, unter
 Windows 11 erst unter "Weitere Optionen anzeigen". Die direkte Anzeige unter
@@ -359,11 +385,16 @@ erst nach "Ausfuehren" aus. `cmd.exe /d /s /c "(<Befehl>) > <Protokoll> 2>&1"`
 startet ihn verborgen; danach erscheinen Befehl, Rueckgabewert und Ausgabe.
 Bei `requiresAdmin: true` fragt Windows vorher nach Rechten.
 
-`Install-SpawnNew.ps1` leert `App`, kopiert `src\Host\*` und `src\Actions`
-hinein, legt die Standardkonfiguration daneben, loest den Katalog auf und
-schreibt daraus die Registrierung aus Abschnitt 13. Es schreibt
-ausschliesslich unter `App` und in die Menueregistrierung. `-Uninstall`
-entfernt beides und nennt die erhaltenen Benutzerdaten.
+`Install-SpawnNew.ps1` bestimmt zuerst den Ort: `-Path`, sonst der
+Cloudordner, auf den das registrierte Menue schon zeigt, sonst lokal. Ein
+Update ueber den unveraenderten Einzeiler bleibt so im Cloudordner. Dann
+leert es `App`, aber nur, wenn der Ordner leer ist oder erkennbar SpawnNew
+enthaelt, kopiert `src\Host\*` und `src\Actions` hinein, legt die
+Standardkonfiguration daneben, im Cloudordner auch Markierung, `Actions`,
+`Vorlagen` und die beiden `.cmd`-Dateien, loest den Katalog auf und
+schreibt daraus die Registrierung aus Abschnitt 13. `-Uninstall` entfernt
+die Registrierung, lokal auch `App`, im Cloudordner nur mit
+`-RemoveFiles`, und nennt die erhaltenen Benutzerdaten.
 
 ## 15. Encoding
 

@@ -9,7 +9,9 @@
 
 Set-StrictMode -Version 2.0
 
-$script:ScopeRank = @{ personal = 0; shared = 1 }
+$script:ScopeRank    = @{ personal = 0; shared = 1 }
+$script:ModuleRoot   = $PSScriptRoot
+$script:PortableName = 'spawnnew.portable.json'
 
 function Add-SpawnNewDiagnostic {
     <#
@@ -37,7 +39,8 @@ function Add-SpawnNewDiagnostic {
 function Expand-SpawnNewPath {
     <#
     .SYNOPSIS
-    Loest Umgebungsvariablen und %SPAWNNEW_APP% in einem Pfad auf.
+    Loest Umgebungsvariablen, %SPAWNNEW_APP% und %SPAWNNEW_DATA% in einem
+    Pfad auf.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -49,6 +52,9 @@ function Expand-SpawnNewPath {
     if ($Path.Length -eq 0) { return '' }
 
     $result = $Path.Replace('%SPAWNNEW_APP%', $AppDirectory)
+    if ($result.Contains('%SPAWNNEW_DATA%')) {
+        $result = $result.Replace('%SPAWNNEW_DATA%', (Get-SpawnNewDataDirectory -AppDirectory $AppDirectory))
+    }
     return [System.Environment]::ExpandEnvironmentVariables($result)
 }
 
@@ -64,16 +70,77 @@ function Get-SpawnNewPathKey {
     return $Path.TrimEnd('\', '/').ToLowerInvariant()
 }
 
+function Get-SpawnNewPortableFile {
+    <#
+    .SYNOPSIS
+    Markierungsdatei einer Installation im Cloudordner.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([Parameter(Mandatory)][string]$AppDirectory)
+
+    return (Join-Path $AppDirectory $script:PortableName)
+}
+
 function Get-SpawnNewDataDirectory {
     <#
     .SYNOPSIS
-    Benutzerdatenverzeichnis von SpawnNew, getrennt von den Programmdateien.
+    Datenverzeichnis fuer Einstellungen, persoenliche Aktionen und eigene
+    Vorlagen, getrennt von den Programmdateien.
+    .DESCRIPTION
+    Liegt neben dem Programmverzeichnis eine Markierungsdatei, gilt das dort
+    genannte Verzeichnis, relativ zum Programmverzeichnis. So zeigt eine
+    Installation in OneDrive oder Google Drive auf jedem Rechner auf den
+    eigenen Pfad des Cloudordners, unabhaengig von Laufwerk und Benutzer.
+    Ohne Markierung gilt %LOCALAPPDATA%\SpawnNew.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([string]$AppDirectory = $script:ModuleRoot)
+
+    $marker = Get-SpawnNewPortableFile -AppDirectory $AppDirectory
+    if ([System.IO.File]::Exists($marker)) {
+        try {
+            $data = ConvertFrom-Json ([System.IO.File]::ReadAllText($marker, [System.Text.Encoding]::UTF8))
+            $relative = [string]$data.dataDirectory
+            if ($relative.Length -gt 0) {
+                return [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($AppDirectory, $relative)).TrimEnd('\')
+            }
+        }
+        catch {
+            Write-Verbose ('Markierungsdatei unlesbar, es gilt das lokale Verzeichnis: ' + $_.Exception.Message)
+        }
+    }
+    return (Get-SpawnNewLocalDirectory)
+}
+
+function Get-SpawnNewLocalDirectory {
+    <#
+    .SYNOPSIS
+    Rechnergebundenes Verzeichnis fuer Geheimnisse, Cache und Protokolle.
+    .DESCRIPTION
+    Bleibt auch bei einer Installation im Cloudordner lokal: Geheimnisse
+    sind an Benutzer und Rechner gebunden, Cache und Protokolle wuerden
+    zwischen Rechnern Synchronisationskonflikte erzeugen.
     #>
     [CmdletBinding()]
     [OutputType([string])]
     param()
 
     return (Join-Path $env:LOCALAPPDATA 'SpawnNew')
+}
+
+function Test-SpawnNewPortable {
+    <#
+    .SYNOPSIS
+    Prueft, ob ein Programmverzeichnis zu einer Installation im
+    Cloudordner gehoert.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param([Parameter(Mandatory)][string]$AppDirectory)
+
+    return [System.IO.File]::Exists((Get-SpawnNewPortableFile -AppDirectory $AppDirectory))
 }
 
 function Get-SpawnNewConfigLayerPath {
@@ -87,8 +154,8 @@ function Get-SpawnNewConfigLayerPath {
 
     $layers = New-Object System.Collections.ArrayList
 
-    if ($env:LOCALAPPDATA) {
-        [void]$layers.Add((Join-Path (Get-SpawnNewDataDirectory) 'spawnnew.settings.json'))
+    if ($env:LOCALAPPDATA -or (Test-SpawnNewPortable -AppDirectory $AppDirectory)) {
+        [void]$layers.Add((Join-Path (Get-SpawnNewDataDirectory -AppDirectory $AppDirectory) 'spawnnew.settings.json'))
     }
     if ($env:ProgramData) {
         [void]$layers.Add((Join-Path (Join-Path $env:ProgramData 'SpawnNew') 'spawnnew.settings.json'))
@@ -451,4 +518,4 @@ function Get-SpawnNewConfig {
     }
 }
 
-Export-ModuleMember -Function Add-SpawnNewDiagnostic, Expand-SpawnNewPath, Get-SpawnNewPathKey, Get-SpawnNewDataDirectory, Get-SpawnNewConfigLayerPath, Test-SpawnNewProperty, ConvertTo-SpawnNewCommand, Read-SpawnNewJsonFile, Get-SpawnNewIntProperty, ConvertTo-SpawnNewEndpoint, Get-SpawnNewEndpoint, Get-SpawnNewConfig
+Export-ModuleMember -Function Add-SpawnNewDiagnostic, Expand-SpawnNewPath, Get-SpawnNewPathKey, Get-SpawnNewPortableFile, Get-SpawnNewDataDirectory, Get-SpawnNewLocalDirectory, Test-SpawnNewPortable, Get-SpawnNewConfigLayerPath, Test-SpawnNewProperty, ConvertTo-SpawnNewCommand, Read-SpawnNewJsonFile, Get-SpawnNewIntProperty, ConvertTo-SpawnNewEndpoint, Get-SpawnNewEndpoint, Get-SpawnNewConfig

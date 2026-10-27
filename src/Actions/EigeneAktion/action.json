@@ -8,7 +8,7 @@
   "supportsCancel": false,
   "allowsOverwrite": false,
   "targetKind": "folder",
-  "defaultTarget": "%LOCALAPPDATA%\\SpawnNew\\Actions",
+  "defaultTarget": "%SPAWNNEW_DATA%\\Actions",
   "fields": [
     { "name": "name", "label": "Menuename", "type": "text", "required": true },
     { "name": "id", "label": "Aktions-ID", "type": "text", "required": true, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$", "message": "Aktions-ID: 3 bis 64 Zeichen aus Buchstaben, Ziffern, Punkt, Strich und Unterstrich, etwa eigen.notiz.", "default": "eigen." },

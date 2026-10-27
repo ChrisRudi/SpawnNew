@@ -33,13 +33,13 @@ function Test-SpawnNewSecretName {
 function Get-SpawnNewSecretDirectory {
     <#
     .SYNOPSIS
-    Ablage der Geheimnisse im Benutzerdatenbereich.
+    Ablage der Geheimnisse, immer lokal: DPAPI bindet sie an Benutzer und Rechner.
     #>
     [CmdletBinding()]
     [OutputType([string])]
     param()
 
-    return (Join-Path (Get-SpawnNewDataDirectory) 'Secrets')
+    return (Join-Path (Get-SpawnNewLocalDirectory) 'Secrets')
 }
 
 function Get-SpawnNewSecretPath {

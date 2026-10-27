@@ -120,10 +120,13 @@ try {
 
     # Bis zur Explorer-Erweiterung steht das Menue fest in der Registrierung.
     # Weicht es vom Katalog ab, etwa nach einer neuen persoenlichen Aktion,
-    # wird es hier nachgezogen. Nur bei Benutzerinstallation, ohne Rechte.
+    # wird es hier nachgezogen. Nur bei Benutzerinstallation, ohne Rechte,
+    # und nur, wenn das Menue zu genau dieser Installation gehoert.
     try {
-        if ((Get-SpawnNewInstallScope -AppDirectory $AppDirectory) -eq 'CurrentUser') {
-            $root    = Get-SpawnNewRegistryRoot -Scope 'CurrentUser'
+        $root = Get-SpawnNewRegistryRoot -Scope 'CurrentUser'
+        $owner = Get-SpawnNewRegisteredAppDirectory -Root $root
+        $own = $owner -and ((Get-SpawnNewPathKey -Path $owner) -eq (Get-SpawnNewPathKey -Path $AppDirectory))
+        if ($own -and (Get-SpawnNewInstallScope -AppDirectory $AppDirectory) -eq 'CurrentUser') {
             $entries = Get-SpawnNewRegistryEntry -Action $catalog.Actions -AppDirectory $AppDirectory -Root $root -Command (Get-SpawnNewMenuCommand -Config $config)
             if (Sync-SpawnNewRegistration -Entry $entries -Root $root) { Write-SpawnNewHostLog '    Menue neu geschrieben' }
         }

@@ -174,11 +174,49 @@ function Get-SpawnNewInstallScope {
     [OutputType([string])]
     param([Parameter(Mandatory)][string]$AppDirectory)
 
-    if ($env:LOCALAPPDATA) {
-        $user = (Join-Path $env:LOCALAPPDATA 'SpawnNew').TrimEnd('\') + '\'
-        if ($AppDirectory.StartsWith($user, [System.StringComparison]::OrdinalIgnoreCase)) { return 'CurrentUser' }
+    # Nur unter den Programmverzeichnissen von Windows ist es eine
+    # Installation fuer alle Benutzer; lokal und im Cloudordner gehoert sie
+    # dem angemeldeten Benutzer.
+    foreach ($system in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:ProgramW6432)) {
+        if (-not $system) { continue }
+        if ($AppDirectory.StartsWith($system.TrimEnd('\') + '\', [System.StringComparison]::OrdinalIgnoreCase)) { return 'AllUsers' }
     }
-    return 'AllUsers'
+    return 'CurrentUser'
+}
+
+function ConvertFrom-SpawnNewCommandLine {
+    <#
+    .SYNOPSIS
+    Programmverzeichnis aus einer registrierten Befehlszeile, sonst ''.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Line)
+
+    $match = [regex]::Match($Line, '-File "([^"]+)\\SpawnNew\.(Host|Command)\.ps1"')
+    if ($match.Success) { return $match.Groups[1].Value }
+    return ''
+}
+
+function Get-SpawnNewRegisteredAppDirectory {
+    <#
+    .SYNOPSIS
+    Programmverzeichnis, auf das das registrierte Menue zeigt, sonst ''.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([Parameter(Mandatory)][string]$Root)
+
+    $shell = (Get-SpawnNewMenuKey -Root $Root) + '\shell'
+    if (-not (Test-Path -LiteralPath $shell)) { return '' }
+
+    foreach ($key in @(Get-ChildItem -LiteralPath $shell)) {
+        $command = Get-Item -LiteralPath (Join-Path $key.PSPath 'command') -ErrorAction SilentlyContinue
+        if ($null -eq $command) { continue }
+        $directory = ConvertFrom-SpawnNewCommandLine -Line ([string]$command.GetValue(''))
+        if ($directory) { return $directory }
+    }
+    return ''
 }
 
 function Test-SpawnNewRegistration {
@@ -279,4 +317,4 @@ function Remove-SpawnNewRegistration {
     Remove-Item -LiteralPath $menu -Recurse -Force
 }
 
-Export-ModuleMember -Function Get-SpawnNewRegistryRoot, Get-SpawnNewMenuKey, Get-SpawnNewKeyName, Get-SpawnNewActionCommand, Get-SpawnNewManagementCommand, Get-SpawnNewMenuCommand, Get-SpawnNewRegistryEntry, Get-SpawnNewInstallScope, Test-SpawnNewRegistration, Sync-SpawnNewRegistration, Set-SpawnNewRegistration, Remove-SpawnNewRegistration
+Export-ModuleMember -Function Get-SpawnNewRegistryRoot, Get-SpawnNewMenuKey, Get-SpawnNewKeyName, Get-SpawnNewActionCommand, Get-SpawnNewManagementCommand, Get-SpawnNewMenuCommand, Get-SpawnNewRegistryEntry, Get-SpawnNewInstallScope, ConvertFrom-SpawnNewCommandLine, Get-SpawnNewRegisteredAppDirectory, Test-SpawnNewRegistration, Sync-SpawnNewRegistration, Set-SpawnNewRegistration, Remove-SpawnNewRegistration

@@ -37,6 +37,7 @@ Die Explorer-Anbindung ist unabhängig von PowerToys. Neue Aktionen werden aus k
 | Kategorien | Optional; Aktionen können direkt unter SpawnNew oder in Kategorien stehen |
 | Teilfehler | Optionale Aufräumfunktion je Aktion; ohne diese bleiben erstellte Teile erhalten |
 | Installation | Wahlweise für aktuellen Benutzer oder alle Benutzer |
+| Ablage | Vorzugsweise komplett in einem Cloudordner (OneDrive, Google Drive): Programmdateien, eigene Aktionen, eigene Vorlagen und Einstellungen gelten auf allen Rechnern. Je Rechner bleiben nur Menüeintrag, Geheimnisse, Cache und Protokolle lokal |
 | Nachladen | Änderungen werden beim nächsten Öffnen des Kontextmenüs berücksichtigt. Bereits geöffnete Menüs werden nicht aktualisiert |
 | Quellenfehler | Fehlerhafte oder nicht erreichbare Quellen werden protokolliert, blockieren aber weder andere Quellen noch den Explorer dauerhaft |
 | Dokumente | Markdown oder Word-kompatible `.docx`-Dateien auswählbar; eigene Vorlagendateien möglich. Platzhalter werden auch im Inhalt einer `.docx` ersetzt, ohne Word-Automatisierung |

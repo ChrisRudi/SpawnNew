@@ -1,4 +1,4 @@
-<!-- README.md | Version 1.4 | 26.10.2026 -->
+<!-- README.md | Version 1.5 | 26.10.2026 -->
 
 # SpawnNew
 
@@ -8,15 +8,46 @@ und Windows 11. Anforderungen und Abnahmekriterien stehen in
 
 ## Installieren und testen
 
-### In einer PowerShell-Sitzung
+### Im Cloudordner (empfohlen)
 
-Das ist der normale Fall. Eine Zeile, ohne Administratorrechte:
+SpawnNew laeuft komplett aus OneDrive, Google Drive oder einem anderen
+synchronisierten Ordner: Programmdateien, eigene Aktionen, eigene Vorlagen
+und Einstellungen liegen dort und gelten auf allen Rechnern. Eine Zeile in
+einer PowerShell-Sitzung, ohne Administratorrechte:
+
+```
+[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = "$env:TEMP\spawnnew.zip"; $dir = "$env:TEMP\spawnnew"; Invoke-WebRequest 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive $zip $dir -Force; & "$dir\SpawnNew-main\src\Install-SpawnNew.ps1" -Path "$env:OneDrive\SpawnNew"
+```
+
+Fuer Google Drive am Ende statt dessen etwa `-Path "G:\Meine Ablage\SpawnNew"`.
+
+Auf jedem weiteren Rechner genuegt danach ein Doppelklick auf
+**SpawnNew einrichten.cmd** im Cloudordner; das traegt nur das Menue ein.
+**SpawnNew auf diesem Rechner entfernen.cmd** nimmt es wieder heraus.
+
+| Liegt im Cloudordner, auf allen Rechnern gleich | Bleibt auf jedem Rechner lokal |
+|---|---|
+| `App\` Programmdateien | Menueeintrag in der Registrierung |
+| `Actions\` eigene Aktionen | Geheimnisse (API-Schluessel), an Benutzer und Rechner gebunden |
+| `Vorlagen\` eigene Dokumentvorlagen | Cache und Protokolle unter `%LOCALAPPDATA%\SpawnNew` |
+| `spawnnew.settings.json` Einstellungen, KI-Endpunkte | |
+
+Fuer OneDrive den Ordner per Rechtsklick auf **Immer auf diesem Geraet
+behalten** stellen, sonst laedt das erste Oeffnen des Menues die Dateien
+erst herunter. Ein Update ueber **SpawnNew aktualisieren** oder den
+Einzeiler bleibt im Cloudordner und gilt damit fuer alle Rechner.
+
+### Lokal in einer PowerShell-Sitzung
+
+Nur fuer diesen Rechner, unter `%LOCALAPPDATA%\SpawnNew`:
 
 ```
 [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = "$env:TEMP\spawnnew.zip"; $dir = "$env:TEMP\spawnnew"; Invoke-WebRequest 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive $zip $dir -Force; & "$dir\SpawnNew-main\src\Install-SpawnNew.ps1" -Scope CurrentUser
 ```
 
-Entfernen, Benutzerdaten bleiben erhalten:
+Entfernen, Benutzerdaten bleiben erhalten. Bei einer Installation im
+Cloudordner entfernt das nur das Menue auf diesem Rechner; mit
+`-RemoveFiles` auch die Programmdateien fuer alle Rechner:
 
 ```
 [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; $zip = "$env:TEMP\spawnnew.zip"; $dir = "$env:TEMP\spawnnew"; Invoke-WebRequest 'https://github.com/ChrisRudi/SpawnNew/archive/refs/heads/main.zip' -OutFile $zip -UseBasicParsing; if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }; Expand-Archive $zip $dir -Force; & "$dir\SpawnNew-main\src\Install-SpawnNew.ps1" -Scope CurrentUser -Uninstall
@@ -39,8 +70,11 @@ Diese Fassung steht auch in `config/spawnnew.settings.default.json` unter
 ### Aus einem lokalen Klon
 
 ```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\src\Install-SpawnNew.ps1 -Scope CurrentUser
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\src\Install-SpawnNew.ps1 -Path "$env:OneDrive\SpawnNew"
 ```
+
+Ohne `-Path` installiert der Installer dorthin, wo SpawnNew bisher lag:
+in den Cloudordner, wenn das Menue schon auf einen zeigt, sonst lokal.
 
 ### Hinweise
 
@@ -103,8 +137,8 @@ legen nichts an. Einzelheiten: [`docs/KI-Anbindung.md`](docs/KI-Anbindung.md).
 
 ### Eigene Vorlagen
 
-Eine Datei `%LOCALAPPDATA%\SpawnNew\Vorlagen\<Aktions-ID>\<Name>.md` oder
-`.docx` ersetzt die mitgelieferte Vorlage, etwa
+Eine Datei `Vorlagen\<Aktions-ID>\<Name>.md` oder
+`.docx` im Datenverzeichnis (Cloudordner oder `%LOCALAPPDATA%\SpawnNew`) ersetzt die mitgelieferte Vorlage, etwa
 `...\Vorlagen\spawnnew.workshoplog\Protokoll.docx`. Platzhalter wie
 `{{klasse}}`, `{{thema}}` oder `{{datumText}}` werden auch im Inhalt einer
 `.docx` ersetzt; Word ist dafuer nicht noetig. **SpawnNew konfigurieren >
@@ -113,7 +147,7 @@ Vorlagenordner oeffnen** fuehrt dorthin.
 ### Wenn etwas fehlt
 
 ```
-& "$env:LOCALAPPDATA\SpawnNew\App\SpawnNew.Diagnose.ps1"
+& "$env:OneDrive\SpawnNew\App\SpawnNew.Diagnose.ps1"
 ```
 
 Zeigt Konfigurationsschichten, Quellen und ihre Erreichbarkeit, das
