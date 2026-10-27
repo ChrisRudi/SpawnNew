@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Progress.psm1
-# Version 1.0 | Fortschrittsfenster des Ausfuehrungsprozesses.
+# Version 1.1 | Fortschrittsfenster des Ausfuehrungsprozesses.
 # Zweck  : Fortschritt der laufenden Aktion anzeigen, Abbruch anfordern und
 #          am Ende Status, Meldung, Fehlerdetails und erstellte Ressourcen
 #          zeigen. Unterscheidet Erfolg, Teilergebnis, Abbruch, Fehler und
@@ -88,8 +88,13 @@ function Invoke-SpawnNewProgressWindow {
     param(
         [Parameter(Mandatory)]$Run,
         [Parameter(Mandatory)]$Action,
-        [Parameter(Mandatory)]$Process
+        [Parameter(Mandatory)]$Process,
+        [switch]$AutoClose
     )
+
+    # Bei einem Vorschlag folgt gleich die Zusammenfassung; das Fenster
+    # schliesst sich dann bei Erfolg selbst.
+    $closeOnSuccess = [bool]$AutoClose
 
     $state = [pscustomobject]@{
         Offset   = [long]0
@@ -204,6 +209,8 @@ function Invoke-SpawnNewProgressWindow {
 
         $button.Text    = 'Schließen'
         $button.Enabled = $true
+
+        if ($closeOnSuccess -and $status.Status -eq 'success') { $form.Close() }
     }
     $timer.Add_Tick($onTick.GetNewClosure())
 

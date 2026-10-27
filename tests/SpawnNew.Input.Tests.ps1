@@ -165,3 +165,28 @@ Add-SpawnNewTest 'Aktion ohne Felder liefert eine leere Feldliste' {
     Confirm-SpawnNewValue -Label 'Anzahl' -Actual $result.Field.Count -Expected 0
     Confirm-SpawnNewValue -Label 'Diagnosen' -Actual $result.Diagnostics.Count -Expected 0
 }
+
+Add-SpawnNewTest 'Dateifeld verlangt eine vorhandene Datei mit vollem Pfad' {
+    $Work = Get-SpawnNewTestDirectory
+    $file = Add-SpawnNewTestFile -Path (Join-Path $Work 'Bericht Ü.txt') -Content 'x'
+    $field = [pscustomobject]@{ Name = 'datei'; Label = 'Datei'; Type = 'file'; Required = $true; Default = ''; Choices = @(); Pattern = ''; Message = '' }
+
+    Confirm-SpawnNewValue -Label 'vorhanden' -Actual (Test-SpawnNewFieldValue -Field $field -Value $file).Valid -Expected $true
+    Confirm-SpawnNewValue -Label 'fehlt' -Actual (Test-SpawnNewFieldValue -Field $field -Value (Join-Path $Work 'nein.txt')).Valid -Expected $false
+    Confirm-SpawnNewValue -Label 'relativ' -Actual (Test-SpawnNewFieldValue -Field $field -Value 'Bericht Ü.txt').Valid -Expected $false
+}
+
+Add-SpawnNewTest 'Endpunktfeld wird aus der Konfiguration gefuellt' {
+    $diagnostics = New-Object System.Collections.ArrayList
+    $holder = [pscustomobject]@{ Fields = (ConvertFrom-Json '[ { "name": "modell", "label": "Modell", "type": "endpoint" } ]'); DescriptionPath = '' }
+    $fields = @(Get-SpawnNewFieldList -Action $holder -Diagnostics $diagnostics)
+
+    Confirm-SpawnNewValue -Label 'nicht uebersprungen' -Actual $fields.Count -Expected 1
+    Confirm-SpawnNewValue -Label 'ohne Endpunkte ungueltig' -Actual (Test-SpawnNewFieldValue -Field $fields[0] -Value 'Lokal').Valid -Expected $false
+
+    Set-SpawnNewEndpointChoice -Field $fields -Name @('Lokal', 'Web') -Default 'Web'
+
+    Confirm-SpawnNewValue -Label 'Vorbelegung' -Actual (Get-SpawnNewFieldDefault -Field $fields[0]) -Expected 'Web'
+    Confirm-SpawnNewValue -Label 'gueltig' -Actual (Test-SpawnNewFieldValue -Field $fields[0] -Value 'Lokal').Valid -Expected $true
+    Confirm-SpawnNewValue -Label 'unbekannt' -Actual (Test-SpawnNewFieldValue -Field $fields[0] -Value 'Andere').Valid -Expected $false
+}

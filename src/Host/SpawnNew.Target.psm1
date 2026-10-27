@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Target.psm1
-# Version 1.0 | Zielpfad, Konflikte, Voraussetzungen und Zusammenfassung.
+# Version 1.1 | Zielpfad, Konflikte, Voraussetzungen und Zusammenfassung.
 # Zweck  : Namen und Zielpfade nach den Windows-Regeln pruefen, Zielart und
 #          Zielzustand bestimmen, freien Namen vorschlagen, fehlende
 #          Voraussetzungen melden und den Text der Zusammenfassung bauen.
@@ -11,6 +11,8 @@ Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Config.psm1')
 Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Input.psm1')
+Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Secret.psm1')
+Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Llm.psm1')
 
 # Windows-Zeichenverbote, bewusst festgeschrieben: SpawnNew laeuft nur unter
 # Windows, und GetInvalidFileNameChars liefert je Plattform andere Mengen.
@@ -138,6 +140,44 @@ function Get-SpawnNewTargetKind {
     return $kind
 }
 
+function Get-SpawnNewTargetName {
+    <#
+    .SYNOPSIS
+    Name des anzulegenden Ordners.
+    .DESCRIPTION
+    Das Feld 'name' hat Vorrang. Fehlt es, bildet 'nameTemplate' aus
+    action.json den Namen, etwa '{{datum}} {{klasse}} {{thema}}'. Zeichen,
+    die Windows in Namen verbietet, werden durch '-' ersetzt; die Pruefung
+    mit Test-SpawnNewName folgt danach wie bei einem eingegebenen Namen.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)]$Action,
+        [Parameter(Mandatory)][hashtable]$Value
+    )
+
+    if ($Value.ContainsKey('name')) { return [string]$Value['name'] }
+
+    $template = ''
+    if (Test-SpawnNewProperty $Action 'NameTemplate') { $template = [string]$Action.NameTemplate }
+    if ($template.Length -eq 0) { return '' }
+
+    $lookup = @{}
+    foreach ($key in $Value.Keys) { $lookup[([string]$key).ToLowerInvariant()] = [string]$Value[$key] }
+
+    $evaluator = [System.Text.RegularExpressions.MatchEvaluator] {
+        param($match)
+        $key = $match.Groups[1].Value.ToLowerInvariant()
+        if ($lookup.ContainsKey($key)) { return $lookup[$key] }
+        return ''
+    }
+    $name = [regex]::Replace($template, '\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}', $evaluator)
+
+    foreach ($char in $script:InvalidNameChars) { $name = $name.Replace([string]$char, '-') }
+    return (($name -replace '\s+', ' ').Trim().TrimEnd('.'))
+}
+
 function Join-SpawnNewTargetPath {
     <#
     .SYNOPSIS
@@ -208,30 +248,76 @@ function Get-SpawnNewMissingPrerequisite {
     #>
     [CmdletBinding()]
     [OutputType([object[]])]
-    param([Parameter(Mandatory)]$Action)
+    param(
+        [Parameter(Mandatory)]$Action,
+        $Config
+    )
 
     $missing = New-Object System.Collections.ArrayList
 
     foreach ($entry in @($Action.Prerequisites)) {
         $kind = Get-SpawnNewStringOrDefault $entry 'kind' 'command'
         $name = Get-SpawnNewStringOrDefault -InputObject $entry -Name 'name' -Default ''
+        $entryHint = Get-SpawnNewStringOrDefault -InputObject $entry -Name 'hint' -Default ''
+
+        # Ein KI-Endpunkt braucht keinen Namen; geprueft wird der
+        # voreingestellte Endpunkt samt Geheimnis und Erreichbarkeit.
+        if ($kind -eq 'endpoint') {
+            $problem = Get-SpawnNewEndpointProblem -Config $Config
+            if ($problem.Length -gt 0) {
+                [void]$missing.Add([pscustomobject]@{ Kind = 'KI-Endpunkt'; Name = $problem; Hint = $entryHint })
+            }
+            continue
+        }
+
         if ($name.Length -eq 0) { continue }
 
         $found = switch ($kind) {
             'command' { $null -ne (Get-Command -Name $name -ErrorAction SilentlyContinue) }
             'module'  { @(Get-Module -Name $name -ListAvailable).Count -gt 0 }
             'file'    { Test-Path -LiteralPath (Join-Path $Action.ActionDirectory $name) }
+            'secret'  { Test-SpawnNewSecret -Name $name }
             default   { $true }
         }
 
         if ($found) { continue }
 
-        $entryHint = Get-SpawnNewStringOrDefault -InputObject $entry -Name 'hint' -Default ''
         $item = [pscustomobject]@{ Kind = $kind; Name = $name; Hint = $entryHint }
         [void]$missing.Add($item)
     }
 
+    if (Test-SpawnNewProperty $Action 'Secrets') {
+        foreach ($secret in @($Action.Secrets)) {
+            if ([string]$secret -and -not (Test-SpawnNewSecret -Name ([string]$secret))) {
+                [void]$missing.Add([pscustomobject]@{ Kind = 'secret'; Name = [string]$secret; Hint = 'Unter SpawnNew konfigurieren speichern.' })
+            }
+        }
+    }
+
     return [object[]]$missing.ToArray()
+}
+
+function Get-SpawnNewEndpointProblem {
+    <#
+    .SYNOPSIS
+    Grund, warum der voreingestellte KI-Endpunkt nicht nutzbar ist, sonst
+    eine leere Zeichenkette.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([AllowNull()]$Config)
+
+    $endpoint = $null
+    if ($null -ne $Config) { $endpoint = Get-SpawnNewEndpoint -Config $Config }
+    if ($null -eq $endpoint) { return 'Es ist kein KI-Endpunkt konfiguriert.' }
+
+    if ($endpoint.Secret.Length -gt 0 -and -not (Test-SpawnNewSecret -Name $endpoint.Secret)) {
+        return ("Für den Endpunkt '" + $endpoint.Name + "' fehlt das Geheimnis '" + $endpoint.Secret + "'.")
+    }
+
+    $check = Test-SpawnNewEndpoint -Endpoint $endpoint
+    if (-not $check.Reachable) { return $check.Message }
+    return ''
 }
 
 function Get-SpawnNewSummaryText {
@@ -310,4 +396,4 @@ function Get-SpawnNewConflictText {
     }
 }
 
-Export-ModuleMember -Function Test-SpawnNewName, Test-SpawnNewBasePath, Get-SpawnNewBasePath, Get-SpawnNewTargetKind, Join-SpawnNewTargetPath, Get-SpawnNewTargetState, Get-SpawnNewFreeName, Get-SpawnNewMissingPrerequisite, Get-SpawnNewSummaryText, Get-SpawnNewConflictText
+Export-ModuleMember -Function Test-SpawnNewName, Test-SpawnNewBasePath, Get-SpawnNewBasePath, Get-SpawnNewTargetKind, Get-SpawnNewTargetName, Join-SpawnNewTargetPath, Get-SpawnNewEndpointProblem, Get-SpawnNewTargetState, Get-SpawnNewFreeName, Get-SpawnNewMissingPrerequisite, Get-SpawnNewSummaryText, Get-SpawnNewConflictText

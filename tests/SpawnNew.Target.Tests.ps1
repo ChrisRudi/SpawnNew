@@ -222,3 +222,51 @@ Add-SpawnNewTest 'Zusammenfassung zeigt Wahrheitswerte als Ja und Nein' {
     Confirm-SpawnNewMatch -Label 'wahr' -Actual $text -Pattern 'Commit: Ja'
     Confirm-SpawnNewMatch -Label 'falsch' -Actual $text -Pattern 'Push: Nein'
 }
+
+Add-SpawnNewTest 'Ordnername entsteht aus der Namensvorlage' {
+    $action = [pscustomobject]@{ NameTemplate = '{{datum}} {{klasse}} {{thema}}' }
+    $name = Get-SpawnNewTargetName -Action $action -Value @{ datum = '2026-10-26'; klasse = 'E1a'; thema = 'Löten: Teil 1/2?' }
+
+    Confirm-SpawnNewValue -Label 'Name' -Actual $name -Expected '2026-10-26 E1a Löten- Teil 1-2-'
+    Confirm-SpawnNewValue -Label 'gueltig' -Actual (Test-SpawnNewName -Name $name).Valid -Expected $true
+}
+
+Add-SpawnNewTest 'Feld name geht der Namensvorlage vor' {
+    $action = [pscustomobject]@{ NameTemplate = '{{thema}}' }
+    Confirm-SpawnNewValue -Label 'Name' -Actual (Get-SpawnNewTargetName -Action $action -Value @{ name = 'Eigen'; thema = 'x' }) -Expected 'Eigen'
+    Confirm-SpawnNewValue -Label 'ohne beides' -Actual (Get-SpawnNewTargetName -Action ([pscustomobject]@{ Title = 'x' }) -Value @{}) -Expected ''
+}
+
+Add-SpawnNewTest 'Fehlender KI-Endpunkt und fehlendes Geheimnis sind Voraussetzungen' {
+    $action = Get-TestActionObject -Prerequisites @([pscustomobject]@{ kind = 'endpoint'; hint = 'konfigurieren' })
+    $none = [pscustomobject]@{ Llm = [pscustomobject]@{ DefaultEndpoint = ''; Endpoints = @() } }
+
+    $missing = @(Get-SpawnNewMissingPrerequisite -Action $action -Config $none)
+    Confirm-SpawnNewValue -Label 'ohne Endpunkt' -Actual $missing.Count -Expected 1
+    Confirm-SpawnNewMatch -Label 'Grund' -Actual $missing[0].Name -Pattern 'kein KI-Endpunkt'
+
+    $web = [pscustomobject]@{ Name = 'Web'; BaseUrl = 'https://api.example.org/v1'; Model = 'm'; TimeoutSeconds = 5; Secret = 'fehlt' }
+    $config = [pscustomobject]@{ Llm = [pscustomobject]@{ DefaultEndpoint = 'Web'; Endpoints = @($web) } }
+    $missing = @(Get-SpawnNewMissingPrerequisite -Action $action -Config $config)
+    Confirm-SpawnNewMatch -Label 'Geheimnis' -Actual $missing[0].Name -Pattern "Geheimnis 'fehlt'"
+}
+
+Add-SpawnNewTest 'Erreichbarer KI-Endpunkt erfuellt die Voraussetzung' {
+    $server = Start-SpawnNewFakeLlm
+    try {
+        $endpoint = [pscustomobject]@{ Name = 'Lokal'; BaseUrl = $server.Url; Model = 'm'; TimeoutSeconds = 5; Secret = '' }
+        $config = [pscustomobject]@{ Llm = [pscustomobject]@{ DefaultEndpoint = 'Lokal'; Endpoints = @($endpoint) } }
+        $missing = @(Get-SpawnNewMissingPrerequisite -Action (Get-TestActionObject -Prerequisites @([pscustomobject]@{ kind = 'endpoint' })) -Config $config)
+    }
+    finally { Stop-SpawnNewFakeLlm -Server $server }
+
+    Confirm-SpawnNewValue -Label 'nichts fehlt' -Actual $missing.Count -Expected 0
+}
+
+Add-SpawnNewTest 'Deklarierte Geheimnisse werden geprueft' {
+    $action = Get-TestActionObject
+    Add-Member -InputObject $action -MemberType NoteProperty -Name 'Secrets' -Value @('github')
+
+    $missing = @(Get-SpawnNewMissingPrerequisite -Action $action)
+    Confirm-SpawnNewValue -Label 'fehlt' -Actual $missing[0].Name -Expected 'github'
+}

@@ -270,3 +270,39 @@ Add-SpawnNewTest 'Pfad der Laufzeit zeigt auf Windows PowerShell 5.1' {
 
     Confirm-SpawnNewValue -Label 'Pfad' -Actual (Get-SpawnNewPowerShellPath) -Expected 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
 }
+
+Add-SpawnNewTest 'Kontext nennt Programmverzeichnis, Endpunkt ohne Schluessel und Vorschlag' {
+    $Work = Get-SpawnNewTestDirectory
+    $run = Get-SpawnNewRun -Root $Work
+    $llm = [pscustomobject]@{ Name = 'Web'; BaseUrl = 'https://api.example.org/v1'; Model = 'm'; TimeoutSeconds = 30; Secret = 'web' }
+
+    [void](Write-SpawnNewContextFile -Run $run -Action (Get-TestActionObject) -ExplorerPath 'D:\x' -TargetPath 'D:\x\y' -TargetExisted $false -ConflictPolicy 'fail' -Value @{} -AppDirectory 'C:\App' -Llm $llm -ProposalFile 'D:\p.json')
+    $context = ConvertFrom-Json ([System.IO.File]::ReadAllText($run.ContextFile))
+
+    Confirm-SpawnNewValue -Label 'App' -Actual $context.appDirectory -Expected 'C:\App'
+    Confirm-SpawnNewValue -Label 'Modell' -Actual $context.llm.model -Expected 'm'
+    Confirm-SpawnNewValue -Label 'Geheimnisname' -Actual $context.llm.secret -Expected 'web'
+    Confirm-SpawnNewValue -Label 'Vorschlag' -Actual $context.proposalFile -Expected 'D:\p.json'
+}
+
+Add-SpawnNewTest 'Ohne Endpunkt bleibt llm leer' {
+    $Work = Get-SpawnNewTestDirectory
+    $run = Get-SpawnNewRun -Root $Work
+    [void](Write-SpawnNewContextFile -Run $run -Action (Get-TestActionObject) -ExplorerPath 'D:\x' -TargetPath 'D:\x\y' -TargetExisted $false -ConflictPolicy 'fail' -Value @{})
+    $context = ConvertFrom-Json ([System.IO.File]::ReadAllText($run.ContextFile))
+
+    Confirm-SpawnNewValue -Label 'llm' -Actual $context.llm -Expected $null
+    Confirm-SpawnNewValue -Label 'Vorschlag' -Actual $context.proposalFile -Expected ''
+}
+
+Add-SpawnNewTest 'Vorschlag wird mit Text und Daten gelesen' {
+    $Work = Get-SpawnNewTestDirectory
+    $file = Add-SpawnNewTestFile -Path (Join-Path $Work 'proposal.json') -Content '{ "text": "- Ordner A", "data": { "folders": [ "A" ] } }'
+
+    $proposal = Read-SpawnNewProposal -Path $file
+    Confirm-SpawnNewValue -Label 'Text' -Actual $proposal.Text -Expected '- Ordner A'
+    Confirm-SpawnNewValue -Label 'Daten' -Actual @($proposal.Data.folders)[0] -Expected 'A'
+
+    [void](Add-SpawnNewTestFile -Path $file -Content '{ "text": "  " }')
+    Confirm-SpawnNewValue -Label 'leer' -Actual (Read-SpawnNewProposal -Path $file) -Expected $null
+}

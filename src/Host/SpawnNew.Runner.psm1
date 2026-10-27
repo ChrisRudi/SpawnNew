@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Runner.psm1
-# Version 1.0 | Start und Auswertung einer Aktion nach docs/Aktionsvertrag.md.
+# Version 1.1 | Start und Auswertung einer Aktion nach docs/Aktionsvertrag.md.
 # Zweck  : Laufverzeichnis anlegen, Kontextdatei schreiben, Argumente fuer
 #          Windows PowerShell 5.1 bauen, Aktion normal oder erhoeht starten,
 #          Fortschritt mitlesen, Ergebnis und Rueckgabewert zu einem Status
@@ -48,6 +48,7 @@ function Get-SpawnNewRun {
         ProgressFile = (Join-Path $directory 'progress.jsonl')
         ResultFile   = (Join-Path $directory 'result.json')
         CancelFile   = (Join-Path $directory 'cancel.flag')
+        ProposalFile = (Join-Path $directory 'proposal.json')
     }
 }
 
@@ -68,12 +69,28 @@ function Write-SpawnNewContextFile {
         [Parameter(Mandatory)][string]$TargetPath,
         [Parameter(Mandatory)][bool]$TargetExisted,
         [Parameter(Mandatory)][ValidateSet('fail', 'rename', 'overwrite')][string]$ConflictPolicy,
-        [Parameter(Mandatory)][hashtable]$Value
+        [Parameter(Mandatory)][hashtable]$Value,
+        [string]$AppDirectory = '',
+        [AllowNull()]$Llm = $null,
+        [string]$ProposalFile = ''
     )
 
     $fields = [pscustomobject]@{}
     foreach ($key in @($Value.Keys | Sort-Object)) {
         Add-Member -InputObject $fields -MemberType NoteProperty -Name $key -Value $Value[$key]
+    }
+
+    # Vom Endpunkt nur die Verbindungsangaben und der Name des Geheimnisses.
+    # Der Wert eines Schluessels steht nie in der Kontextdatei.
+    $endpoint = $null
+    if ($null -ne $Llm) {
+        $endpoint = [pscustomobject]@{
+            name           = [string]$Llm.Name
+            baseUrl        = [string]$Llm.BaseUrl
+            model          = [string]$Llm.Model
+            timeoutSeconds = [int]$Llm.TimeoutSeconds
+            secret         = [string]$Llm.Secret
+        }
     }
 
     $context = [pscustomobject]@{
@@ -88,6 +105,9 @@ function Write-SpawnNewContextFile {
         progressFile    = $Run.ProgressFile
         resultFile      = $Run.ResultFile
         cancelFile      = $Run.CancelFile
+        proposalFile    = $ProposalFile
+        appDirectory    = $AppDirectory
+        llm             = $endpoint
         culture         = (Get-Culture).Name
     }
 
@@ -149,11 +169,15 @@ function Invoke-SpawnNewActionProcess {
         Get-SpawnNewActionArgument -ScriptPath $ScriptPath -ContextFile $ContextFile
     }
 
+    # Arbeitsverzeichnis ist das Laufverzeichnis, nie der Explorer-Ordner:
+    # ein Prozess mit dem Ziel als aktuellem Verzeichnis sperrt es gegen
+    # Verschieben und Loeschen.
     $parameter = @{
-        FilePath     = (Get-SpawnNewPowerShellPath)
-        ArgumentList = $argument
-        PassThru     = $true
-        WindowStyle  = 'Hidden'
+        FilePath         = (Get-SpawnNewPowerShellPath)
+        ArgumentList     = $argument
+        PassThru         = $true
+        WindowStyle      = 'Hidden'
+        WorkingDirectory = (Split-Path -Parent $ContextFile)
     }
     if ($RequiresAdmin) { $parameter['Verb'] = 'RunAs' }
 
@@ -322,6 +346,32 @@ function Read-SpawnNewResult {
     }
 }
 
+function Read-SpawnNewProposal {
+    <#
+    .SYNOPSIS
+    Liest den Vorschlag eines Vorschlagsskripts. Liefert $null, wenn er
+    fehlt oder keinen Text enthaelt.
+    .DESCRIPTION
+    Format nach docs/Aktionsvertrag.md Abschnitt 12: 'text' erscheint in der
+    Zusammenfassung, 'data' liest die Aktion nach "Erstellen" wieder ein.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+
+    if (-not [System.IO.File]::Exists($Path)) { return $null }
+
+    try { $raw = ConvertFrom-Json -InputObject ([System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)) }
+    catch { return $null }
+
+    $text = ''
+    if (Test-SpawnNewProperty $raw 'text') { $text = [string]$raw.text }
+    if ($text.Trim().Length -eq 0) { return $null }
+
+    $data = $null
+    if (Test-SpawnNewProperty $raw 'data') { $data = $raw.data }
+    return [pscustomobject]@{ Text = $text; Data = $data }
+}
+
 function Get-SpawnNewErrorField {
     <#
     .SYNOPSIS
@@ -444,4 +494,4 @@ function Test-SpawnNewCleanupOffer {
     return ($Status.Created.Count -gt 0)
 }
 
-Export-ModuleMember -Function Get-SpawnNewPowerShellPath, Get-SpawnNewRun, Write-SpawnNewContextFile, Get-SpawnNewActionArgument, Invoke-SpawnNewActionProcess, Request-SpawnNewCancel, Test-SpawnNewCancelRequested, Read-SpawnNewProgress, ConvertTo-SpawnNewProgressEntry, Read-SpawnNewResult, Get-SpawnNewErrorField, ConvertTo-SpawnNewResource, Get-SpawnNewRunStatus, Test-SpawnNewCleanupOffer
+Export-ModuleMember -Function Get-SpawnNewPowerShellPath, Get-SpawnNewRun, Write-SpawnNewContextFile, Get-SpawnNewActionArgument, Invoke-SpawnNewActionProcess, Request-SpawnNewCancel, Test-SpawnNewCancelRequested, Read-SpawnNewProgress, ConvertTo-SpawnNewProgressEntry, Read-SpawnNewResult, Read-SpawnNewProposal, Get-SpawnNewErrorField, ConvertTo-SpawnNewResource, Get-SpawnNewRunStatus, Test-SpawnNewCleanupOffer

@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Catalog.psm1
-# Version 1.0 | Aktionsquellen abtasten und den Menuekatalog aufloesen.
+# Version 1.1 | Aktionsquellen abtasten und den Menuekatalog aufloesen.
 # Zweck  : Aktionen in den konfigurierten Quellen finden, Aktions-IDs bilden,
 #          Beschreibungen pruefen, Prioritaet aufloesen und bei nicht
 #          erreichbarer Quelle auf den Metadaten-Cache zurueckfallen.
@@ -163,12 +163,16 @@ function ConvertTo-SpawnNewActionEntry {
     $fields        = @()
     $prerequisites = @()
     $plannedSteps  = @()
+    $secrets       = @()
     $cleanup       = ''
+    $proposal      = ''
 
     if (Test-SpawnNewProperty $Description 'fields')        { $fields        = @($Description.fields) }
     if (Test-SpawnNewProperty $Description 'prerequisites') { $prerequisites = @($Description.prerequisites) }
     if (Test-SpawnNewProperty $Description 'plannedSteps')  { $plannedSteps  = @($Description.plannedSteps) }
+    if (Test-SpawnNewProperty $Description 'secrets')       { $secrets       = @($Description.secrets | ForEach-Object { [string]$_ }) }
     if (Test-SpawnNewProperty $Description 'cleanup')       { $cleanup       = [string]$Description.cleanup }
+    if (Test-SpawnNewProperty $Description 'proposal')      { $proposal      = [string]$Description.proposal }
 
     return [pscustomobject]@{
         Id              = $Id
@@ -185,10 +189,13 @@ function ConvertTo-SpawnNewActionEntry {
         AllowsOverwrite = (Get-SpawnNewBoolProperty -InputObject $Description -Name 'allowsOverwrite' -Default $false)
         DefaultTarget   = (Get-SpawnNewStringProperty -InputObject $Description -Name 'defaultTarget' -Default '')
         TargetKind      = (Get-SpawnNewStringProperty -InputObject $Description -Name 'targetKind' -Default 'folder')
+        NameTemplate    = (Get-SpawnNewStringProperty -InputObject $Description -Name 'nameTemplate' -Default '')
         Fields          = $fields
         Prerequisites   = $prerequisites
         PlannedSteps    = $plannedSteps
+        Secrets         = $secrets
         Cleanup         = $cleanup
+        Proposal        = $proposal
         SourceName      = $Source.Name
         SourcePath      = $Source.Path
         SourceScope     = $Source.Scope
@@ -283,6 +290,19 @@ function Read-SpawnNewActionFolder {
         else {
             $action.Cleanup = $cleanupPath
         }
+    }
+
+    # Ohne Vorschlagsskript kann die Zusammenfassung nicht zeigen, was
+    # entstehen soll. Die Aktion ist dann nicht ausfuehrbar.
+    if ($action.Proposal.Length -gt 0) {
+        $proposalPath = Resolve-SpawnNewContainedPath -Directory $Directory -RelativePath $action.Proposal
+        if ($null -eq $proposalPath -or -not (Test-Path -LiteralPath $proposalPath -PathType Leaf)) {
+            $message = "Vorschlagsskript '$($action.Proposal)' fehlt."
+            Add-SpawnNewDiagnostic -Diagnostics $Diagnostics -Severity 'error' `
+                -Area 'action' -Path $Directory -Message $message
+            return $null
+        }
+        $action.Proposal = $proposalPath
     }
 
     return $action

@@ -13,11 +13,15 @@
 [CmdletBinding()]
 param(
     [string]$OutputFile,
-    [string]$AppDirectory = $PSScriptRoot,
+    [string]$AppDirectory = '',
     [string[]]$LayerPath
 )
 
 $ErrorActionPreference = 'Stop'
+
+# $PSScriptRoot ist in Windows PowerShell 5.1 bei -File mit CmdletBinding in
+# den param()-Vorgaben leer; so startet der Explorer dieses Skript.
+if (-not $AppDirectory) { $AppDirectory = $PSScriptRoot }
 
 Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Config.psm1')  -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Catalog.psm1') -ErrorAction Stop

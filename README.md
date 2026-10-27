@@ -1,4 +1,4 @@
-<!-- README.md | Version 1.3 | 26.10.2026 -->
+<!-- README.md | Version 1.4 | 26.10.2026 -->
 
 # SpawnNew
 
@@ -33,8 +33,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Net.ServicePoin
 ```
 
 Diese Fassung steht auch in `config/spawnnew.settings.default.json` unter
-`install` und `update`, weil der Menueeintrag spaeter einen eigenen Prozess
-startet und keine aeussere Sitzung dazwischenliegt.
+`install` und `update`; die Menueeintraege **SpawnNew aktualisieren** und
+**SpawnNew installieren** fuehren sie nach Bestaetigung aus.
 
 ### Aus einem lokalen Klon
 
@@ -51,17 +51,64 @@ noch offen.
 
 Erneutes Ausfuehren desselben Einzeilers wirkt als Aktualisierung: die
 Programmdateien unter `App` werden vollstaendig ersetzt, Einstellungen,
-persoenliche Aktionen, Cache und Protokolle bleiben erhalten.
-`-Scope AllUsers` installiert fuer alle Benutzer und braucht
-Administratorrechte; der Einzeiler oben gilt nur fuer `CurrentUser`.
+persoenliche Aktionen, eigene Vorlagen, Geheimnisse, Cache und Protokolle
+bleiben erhalten. `-Scope AllUsers` installiert fuer alle Benutzer und
+braucht Administratorrechte; der Einzeiler oben gilt nur fuer `CurrentUser`.
 
 Der Installer darf unter Windows PowerShell 5.1 oder unter PowerShell 7
 laufen. Die Aktionen selbst startet SpawnNew immer mit `powershell.exe`,
 also mit Windows PowerShell 5.1.
 
-Der Installer nennt am Ende, wie viele Aktionen registriert wurden und aus
-welcher Quelle. Steht dort `0`, endet er mit Rueckgabewert 1: das Untermenue
-erscheint dann, bleibt aber leer.
+## Das Menue
+
+| Eintrag | Ergebnis |
+|---|---|
+| Datei zusammenfassen | Zusammenfassung einer Textdatei als Entwurf daneben (KI) |
+| Eigene Aktion | Grundgeruest einer neuen Aktion im persoenlichen Aktionsordner |
+| Fehleranalyse | Analysedokument mit Ordnern fuer Logs, Screenshots, Loesungsnachweis |
+| Git-Projekt | lokales Repository mit `.gitignore`, README, optional erstem Commit |
+| Ordner dokumentieren | `README.Entwurf.md` aus Dateiliste und Auszuegen (KI) |
+| Ordnerstruktur | Unterordner nach Vorlage, auch mit NTFS-Rechten |
+| Ordnerstruktur aus Beschreibung | Struktur vom Sprachmodell, angelegt erst nach Bestaetigung (KI) |
+| PowerShell-Werkzeug | Skript mit Kopf, Konfiguration und README |
+| Projekt abschließen | Abschlussvermerk, SHA-256-Manifest, optional ZIP und Archiv |
+| Sitzung | Tagesordnung, Protokoll, Beschlussliste in Markdown oder Word |
+| Werkstättenprotokoll | Protokollvorlage in Markdown oder Word, Bilder- und Messdatenordner |
+| — | |
+| SpawnNew konfigurieren | Uebersicht, Einstellungen, Geheimnisse, Endpunkttest, Menue neu einlesen |
+| SpawnNew aktualisieren | Einzeiler anzeigen, bestaetigen, ausfuehren, Ergebnis zeigen |
+| SpawnNew installieren | dasselbe mit dem Installationseinzeiler |
+
+Jede Aktion zeigt erst ein Formular, dann eine Zusammenfassung mit Ziel,
+Eingaben und geplanten Schritten; angelegt wird erst nach **Erstellen**.
+Vorhandene Dateien werden nie still ueberschrieben.
+
+### KI-Aktionen einrichten
+
+Die Aktionen mit (KI) und die optionalen Entwuerfe in Werkstättenprotokoll,
+Fehleranalyse und Sitzung brauchen einen OpenAI-kompatiblen Endpunkt.
+Vorgabe ist ein lokales Ollama unter `http://localhost:11434/v1` mit dem
+Modell `llama3.2`; dabei verlaesst kein Inhalt den Rechner.
+
+1. Ollama oder LM Studio starten und ein Modell laden.
+2. **SpawnNew konfigurieren > Einstellungen bearbeiten**, unter `llm` einen
+   Endpunkt eintragen, etwa
+   `{ "name": "Lokal", "baseUrl": "http://localhost:1234/v1", "model": "<Modell>" }`.
+3. Fuer einen Webdienst zusaetzlich `"secret": "web"` angeben und den
+   Schluessel unter **Geheimnis speichern** mit dem Namen `web` ablegen.
+4. **KI-Endpunkte testen**.
+
+Ohne erreichbaren Endpunkt melden die KI-Aktionen das vor dem Formular und
+legen nichts an. Einzelheiten: [`docs/KI-Anbindung.md`](docs/KI-Anbindung.md).
+
+### Eigene Vorlagen
+
+Eine Datei `%LOCALAPPDATA%\SpawnNew\Vorlagen\<Aktions-ID>\<Name>.md` oder
+`.docx` ersetzt die mitgelieferte Vorlage, etwa
+`...\Vorlagen\spawnnew.workshoplog\Protokoll.docx`. Platzhalter wie
+`{{klasse}}`, `{{thema}}` oder `{{datumText}}` werden auch im Inhalt einer
+`.docx` ersetzt; Word ist dafuer nicht noetig. **SpawnNew konfigurieren >
+Vorlagenordner oeffnen** fuehrt dorthin.
 
 ### Wenn etwas fehlt
 
@@ -72,28 +119,32 @@ erscheint dann, bleibt aber leer.
 Zeigt Konfigurationsschichten, Quellen und ihre Erreichbarkeit, das
 Zeitverhalten der Quellenerkennung, den aufgeloesten Katalog, alle Diagnosen
 und die tatsaechlich geschriebenen Registrierungseintraege samt Befehlszeile.
-Aendert nichts.
+Aendert nichts. Fehler beim Start einer Aktion stehen in
+`%LOCALAPPDATA%\SpawnNew\Logs\host.log`, bei den Verwaltungsbefehlen in
+`command.log`.
 
-### Was der erste Test zeigen soll
+### Was ein Test von Hand zeigen soll
 
-1. **SpawnNew** erscheint im Kontextmenue, darunter **Git-Projekt** und **Ordnerstruktur**.
-2. Ein Klick oeffnet das Formular mit Zielordner, Name, Strukturvorlage und Zweck.
-3. Ein leerer Name oder ein Name mit `\ / : * ? " < > |` wird abgewiesen.
-4. Die Zusammenfassung nennt Ziel, Eingaben und die drei geplanten Schritte.
-5. **Abbrechen** legt nichts an.
-6. **Erstellen** zeigt das Fortschrittsfenster und danach den Status.
-7. Ein zweiter Lauf mit gleichem Namen fragt: abbrechen, umbenennen, vorhandenen Ordner verwenden.
-8. Eine selbst geschriebene `README.md` im Ziel wird nicht ueberschrieben; der Status lautet dann `partial`.
-
-Fuer **Git-Projekt** zusaetzlich:
-
-1. Das Formular bietet Gitignore-Vorlage, Beschreibung und **Ersten Commit anlegen**.
-2. Die Zusammenfassung zeigt den Commit-Wunsch als `Ja` oder `Nein`.
-3. Ohne eingerichtete Git-Identitaet (`user.name`, `user.email`) bricht die Aktion
-   mit Commit vor jeder Aenderung ab und nennt die beiden `git config`-Befehle;
-   ohne Commit laeuft sie durch.
-4. Im Ziel liegt danach ein Repository; `git log` zeigt den ersten Commit.
-5. Ein Ordner, der schon ein Repository ist, wird nicht angetastet.
+1. **SpawnNew** erscheint im Kontextmenue mit elf Aktionen, darunter durch
+   eine Trennlinie abgesetzt die drei Verwaltungsbefehle.
+2. **Ordnerstruktur**: Formular mit Zielordner, Name, Strukturvorlage und
+   Zweck; ein leerer oder ungueltiger Name wird abgewiesen; **Abbrechen**
+   legt nichts an; ein zweiter Lauf mit gleichem Namen fragt nach.
+3. **Ordnerstruktur** mit Vorlage "Projekt mit vertraulichem Ordner": unter
+   Eigenschaften > Sicherheit von `09 Vertraulich` stehen nur der eigene
+   Benutzer, SYSTEM und Administratoren, ohne Vererbung.
+4. **Werkstättenprotokoll** in Word: der Ordner heisst `Datum Klasse Thema`,
+   `Protokoll.docx` oeffnet sich in Word mit Tabelle und Ueberschriften.
+5. **Projekt abschließen** mit ZIP: `ABSCHLUSS.md`, `MANIFEST-SHA256.txt`
+   und das ZIP neben dem Ordner entstehen; ein zweiter Lauf aendert nichts.
+6. **Eigene Aktion**: nach dem naechsten Aufruf eines SpawnNew-Eintrags steht
+   die neue Aktion im Menue.
+7. **SpawnNew konfigurieren**: Uebersicht zeigt Schichten, Quellen und
+   Endpunkte; ein gespeichertes Geheimnis erscheint nur mit Namen.
+8. **SpawnNew aktualisieren**: Befehl, Ziel und Rechte erscheinen vor der
+   Ausfuehrung; danach Rueckgabewert und Ausgabe.
+9. Mit laufendem lokalem Modell: **Ordnerstruktur aus Beschreibung** zeigt
+   den Vorschlag in der Zusammenfassung; **Abbrechen** legt nichts an.
 
 ## Stand
 
@@ -102,69 +153,62 @@ Fuer **Git-Projekt** zusaetzlich:
 | 1. Dateinamen, Konfiguration, IDs, Prioritaet, Schnittstellenvertrag | fertig |
 | 2. Explorer-Prototyp: direkte Anzeige unter Windows 11 per `IExplorerCommand` | offen |
 | 3. Quellen, Prioritaet, IDs, Nachladen, Cache, Beschreibungspruefung | fertig und geprueft |
-| 4. Formular, Zusammenfassung, PowerShell-Start | fertig; WinForms erst auf Windows erprobbar |
-| 5. Fortschritt, Fehler, Rechte, Aufraeumen | fertig; WinForms erst auf Windows erprobbar |
-| 6. Dokumenterzeugung mit Platzhaltern in Markdown und `.docx` | offen |
-| 7. KI-Anbindung Stufe 1, lokaler Endpunkt | offen |
-| 8. KI-Anbindung Stufe 2, Webendpunkt mit verschluesseltem Schluessel | offen |
-| 9. NTFS-Rechte aus der Vorlage | offen |
-| 10. Elf mitgelieferte Aktionen | 2 von 11 (Ordnerstruktur, Git-Projekt) |
-| 11. Installation, Aktualisierung, Deinstallation | fertig in der Registrierungsstufe; Konfigurationszugriff offen |
-| 12. Menueeintraege fuer Installation und Aktualisierung | Katalogausgabe fertig; Registrierung und Bestaetigung offen |
+| 4. Formular, Zusammenfassung, PowerShell-Start | fertig; Ablauf geprueft, Fenster von Hand noch nicht erprobt |
+| 5. Fortschritt, Fehler, Rechte, Aufraeumen | fertig; Fenster von Hand noch nicht erprobt |
+| 6. Dokumenterzeugung mit Platzhaltern in Markdown und `.docx` | fertig und geprueft |
+| 7. KI-Anbindung Stufe 1, lokaler Endpunkt | fertig, gegen Testserver geprueft |
+| 8. KI-Anbindung Stufe 2, Webendpunkt mit verschluesseltem Schluessel | fertig und geprueft |
+| 9. NTFS-Rechte aus der Vorlage | fertig und geprueft |
+| 10. Elf mitgelieferte Aktionen | fertig, 11 von 11 |
+| 11. Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | fertig in der Registrierungsstufe |
+| 12. Menueeintraege fuer Installation und Aktualisierung | fertig |
 | 13. Abnahme auf Windows 10 und 11 | offen |
 
 Die Menueregistrierung laeuft vorerst ueber die Registrierungsdatenbank
-(`Directory\Background\shell`) und entsteht bei der Installation aus dem
-Katalog. Dynamisches Nachladen beim Oeffnen des Menues und die erste
-Menueebene unter Windows 11 kommen mit der DLL aus Schritt 2.
+(`Directory\Background\shell`). Sie entsteht bei der Installation und wird
+bei jedem Aufruf eines SpawnNew-Eintrags mit dem Katalog abgeglichen.
+Nachladen beim Oeffnen des Menues und die erste Menueebene unter Windows 11
+kommen mit der DLL aus Schritt 2.
 
 ## Aufbau
 
 | Pfad | Inhalt |
 |---|---|
 | `SpawnNew.md` | Konzept und Anforderungen |
-| `docs/Dateiliste.md` | Dateinamen, Ablage, Konfigurationsschichten, ID-Regeln, Beschreibungsformat, Registrierungsaufbau |
-| `docs/Aktionsvertrag.md` | Vertrag zwischen Ausfuehrungsprozess und Aktionsskript |
+| `docs/Dateiliste.md` | Dateinamen, Ablage, Konfigurationsschichten, ID-Regeln, Beschreibungsformat, Vorlagen, Registrierungsaufbau |
+| `docs/Aktionsvertrag.md` | Vertrag zwischen Ausfuehrungsprozess und Aktionsskript, Vorschlagsskript, Hilfsmodul |
+| `docs/KI-Anbindung.md` | Endpunkte, Geheimnisse, Entwuerfe und Vorschlaege |
 | `config/` | mitgelieferte Standardkonfiguration |
 | `src/Install-SpawnNew.ps1` | Installation, Aktualisierung, Deinstallation |
-| `src/Host/` | Ausfuehrungsprozess, Windows PowerShell 5.1 |
+| `src/Host/` | Ausfuehrungsprozess und Verwaltungsbefehle, Windows PowerShell 5.1 |
 | `src/Explorer/` | native Explorer-Erweiterung, C++, noch nicht angelegt |
-| `src/Actions/` | mitgelieferte Aktionen |
-| `tests/` | Tests zu den Bausteinen und zum Ausfuehrungsvertrag |
+| `src/Actions/` | die elf mitgelieferten Aktionen |
+| `tests/` | Tests zu Bausteinen, Aktionen und Host |
 | `tools/` | Pruefwerkzeuge, nicht Teil der Installation |
 
 ## Pruefen
 
-Der Code laeuft unter Windows PowerShell 5.1. Geprueft wird mit PowerShell 7
-und PSScriptAnalyzer, der die 5.1-Kompatibilitaet mitprueft
-(`PSUseCompatibleSyntax`, `PSUseCompatibleCommands`).
-
-```
-pwsh -NoProfile -File tools/Install-DevTools.ps1
-pwsh -NoProfile -File tools/Invoke-Lint.ps1
-pwsh -NoProfile -File tools/Invoke-Test.ps1
-```
-
-`Invoke-Lint.ps1` endet mit Rueckgabewert 1 ab Stufe `Warning`;
-`-Severity Information` zeigt auch Hinweise. Der Lauf dauert einige Minuten,
-weil PSScriptAnalyzer das Kompatibilitaetsprofil je Pfad neu laedt.
-
-`Invoke-Test.ps1` endet mit Rueckgabewert 1 bei mindestens einem Fehler.
-`-Filter` grenzt auf einzelne Testfaelle ein, `-Path` auf einzelne Dateien.
-
-Ohne PowerShell 7 laufen Lint und Tests auch direkt unter Windows
-PowerShell 5.1, sofern PSScriptAnalyzer installiert ist:
+Der Code laeuft unter Windows PowerShell 5.1 und wird dort geprueft:
 
 ```
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Invoke-Lint.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Invoke-Test.ps1
 ```
 
-`SpawnNew.Form.psm1` und `SpawnNew.Progress.psm1` laden WinForms und sind nur
-auf Windows ausfuehrbar; `SpawnNew.Register.psm1` schreibt in die
-Registrierungsdatenbank. Die Regeln dahinter liegen in `SpawnNew.Input.psm1`,
-`SpawnNew.Target.psm1` und den reinen Funktionen von `SpawnNew.Register.psm1`
-und sind dort geprueft.
+PSScriptAnalyzer prueft dabei die 5.1-Kompatibilitaet mit
+(`PSUseCompatibleSyntax`, `PSUseCompatibleCommands`). Fehlt er,
+richtet `pwsh -NoProfile -File tools/Install-DevTools.ps1` ihn ein.
+
+`Invoke-Lint.ps1` endet mit Rueckgabewert 1 ab Stufe `Warning`;
+`-Severity Information` zeigt auch Hinweise. Der Lauf dauert einige Minuten.
+
+`Invoke-Test.ps1` endet mit Rueckgabewert 1 bei mindestens einem Fehler.
+`-Filter` grenzt auf einzelne Testfaelle ein, `-Path` auf eine Datei. Die
+Tests brauchen Windows: sie pruefen Registrierung (in einem eigenen
+Testschluessel), NTFS-Rechte, DPAPI und die Aktionen in eigenen Prozessen.
+Sprachmodelle ersetzt ein Testserver auf 127.0.0.1. Den Host prueft
+`SpawnNew.HostFlow.Tests.ps1` als Ganzes; nur die Fenster sind dort durch
+Stellvertreter ersetzt, die vorgegebene Antworten liefern.
 
 ## Bauen
 

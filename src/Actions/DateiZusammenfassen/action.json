@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.summarizefile",
+  "title": "Datei zusammenfassen",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "inPlace",
+  "fields": [
+    { "name": "datei", "label": "Textdatei", "type": "file", "required": true },
+    { "name": "umfang", "label": "Umfang", "type": "choice", "choices": [ "Kurz", "Ausführlich" ], "default": "Kurz" },
+    { "name": "modell", "label": "Modell", "type": "endpoint", "required": true }
+  ],
+  "prerequisites": [
+    { "kind": "endpoint", "hint": "Lokales Modell starten oder unter SpawnNew konfigurieren einen Endpunkt eintragen." }
+  ],
+  "plannedSteps": [
+    "Textdatei lesen; Binaerdateien werden abgewiesen",
+    "Inhalt an das gewaehlte Sprachmodell senden",
+    "Zusammenfassung als gekennzeichnete Entwurfsdatei <Name>.Zusammenfassung.Entwurf.md neben der Quelle anlegen; nichts wird ueberschrieben"
+  ]
+}

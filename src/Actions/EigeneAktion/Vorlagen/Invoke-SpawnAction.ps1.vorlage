@@ -1,0 +1,41 @@
+﻿# Invoke-SpawnAction.ps1
+# Version 1.0 | Eigene SpawnNew-Aktion: {{name}}.
+# Zweck  : {{beschreibung}}
+#          Das Grundgeruest legt einen Ordner mit einer Notiz an. Die
+#          eigentliche Arbeit gehoert zwischen die markierten Zeilen.
+# Input  : -ContextFile, von SpawnNew uebergeben. Die Formularwerte stehen
+#          unter fields, der bestaetigte Zielpfad unter targetPath.
+# Output : Fortschritt und Ergebnis nach dem SpawnNew-Ausfuehrungsvertrag.
+# Deps   : Windows PowerShell 5.1, SpawnNew.Action.psm1 aus der Installation.
+# Datum  : {{datum}}
+
+[CmdletBinding()]
+param([Parameter(Mandatory)][string]$ContextFile)
+
+$ErrorActionPreference = 'Stop'
+
+# Die Hilfsfunktionen liegen im Programmverzeichnis von SpawnNew. Sie melden
+# Fortschritt, erstellte Ressourcen und das Ergebnis im vereinbarten Format.
+$raw = ConvertFrom-Json ([System.IO.File]::ReadAllText($ContextFile, [System.Text.Encoding]::UTF8))
+Import-Module (Join-Path $raw.appDirectory 'SpawnNew.Action.psm1')
+$context = Initialize-SpawnNewAction -ContextFile $ContextFile
+
+try {
+    $target = [string]$context.targetPath
+    $name = Get-SpawnNewActionField -Name 'name'
+
+    Write-SpawnNewActionStep -Text 'Zielordner anlegen' -Percent 20
+    New-SpawnNewActionFolder -Path $target
+
+    # --- Hier beginnt die eigentliche Arbeit der Aktion. ---
+    Write-SpawnNewActionStep -Text 'Notiz anlegen' -Percent 60
+    $text = '# ' + $name + "`r`n`r`nAngelegt am " + (Get-Date -Format 'dd.MM.yyyy') + ".`r`n"
+    [void](Write-SpawnNewActionText -Path (Join-Path $target 'Notiz.md') -Text $text)
+    # --- Hier endet die eigentliche Arbeit der Aktion. ---
+
+    Write-SpawnNewActionStep -Text 'Fertig' -Percent 100
+    exit (Complete-SpawnNewAction -Message ($name + ' angelegt.'))
+}
+catch {
+    exit (Complete-SpawnNewActionFailed -Reason $_.Exception.Message -Details ([string]$_.ScriptStackTrace))
+}

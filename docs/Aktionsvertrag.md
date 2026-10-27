@@ -1,4 +1,4 @@
-<!-- docs/Aktionsvertrag.md | Version 1.2 | 26.10.2026 -->
+<!-- docs/Aktionsvertrag.md | Version 1.3 | 26.10.2026 -->
 
 # Ausfuehrungsvertrag der PowerShell-Aktionen
 
@@ -13,6 +13,10 @@ Der Ausfuehrungsprozess startet die Aktion so:
 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass
                -File "<entryPoint>" -ContextFile "<Pfad zur Kontext-JSON>"
 ```
+
+Arbeitsverzeichnis ist das Laufverzeichnis der Kontextdatei, nie der
+Explorer-Ordner: ein Prozess mit dem Ziel als aktuellem Verzeichnis sperrt
+es gegen Verschieben und Loeschen.
 
 `-ContextFile` ist der einzige Parameter. Alle Eingaben und Pfade stehen in
 der Kontextdatei, nicht in der Befehlszeile. Damit kann kein Eingabewert in
@@ -43,6 +47,10 @@ gelesen.
   "progressFile": "C:\\Users\\x\\AppData\\Local\\Temp\\sn-1a2b\\progress.jsonl",
   "resultFile":   "C:\\Users\\x\\AppData\\Local\\Temp\\sn-1a2b\\result.json",
   "cancelFile":   "C:\\Users\\x\\AppData\\Local\\Temp\\sn-1a2b\\cancel.flag",
+  "proposalFile": "",
+  "appDirectory": "C:\\Users\\x\\AppData\\Local\\SpawnNew\\App",
+  "llm": { "name": "Lokal", "baseUrl": "http://localhost:11434/v1",
+           "model": "llama3.2", "timeoutSeconds": 180, "secret": "" },
   "culture": "de-DE"
 }
 ```
@@ -54,7 +62,13 @@ gelesen.
 | `conflictPolicy` | `fail`, `rename` oder `overwrite`. Gilt fuer Dateien im Zielpfad |
 | `fields` | Formularwerte, Schluessel sind die Feldnamen aus `action.json` |
 | `cancelFile` | Pfad. Existiert die Datei, hat der Benutzer Abbruch angefordert |
+| `proposalFile` | Vorschlag aus Abschnitt 12, sonst leer |
+| `appDirectory` | Programmverzeichnis mit `SpawnNew.Action.psm1` und den uebrigen Modulen |
+| `llm` | Gewaehlter KI-Endpunkt oder `null`. `secret` ist nur der Name des Geheimnisses, nie der Wert |
 | `culture` | Kultur des Ausfuehrungsprozesses, etwa `de-DE` |
+
+Fuer `targetKind: folder` steht der Ordnername immer unter `fields.name`,
+auch wenn er aus `nameTemplate` gebildet wurde.
 
 `targetPath` entsteht je nach `targetKind` der Aktion: bei `folder` aus dem
 bestaetigten Basisverzeichnis und dem Feld `name`, bei `inPlace` aus dem
@@ -203,3 +217,46 @@ und der Benutzer erhaelt eine Meldung (Abschnitt 6, Abnahme 14).
 - Keine stille Ueberschreibung. `conflictPolicy` einhalten.
 - Keine undokumentierten globalen Seiteneffekte.
 - Ergebnisdatei immer schreiben, auch im Fehlerfall.
+- Modellausgabe nur als gekennzeichneten Entwurf oder nach Bestaetigung
+  ueber einen Vorschlag schreiben, nie ueber eine vorhandene Datei.
+
+## 12. Vorschlagsskript
+
+`action.json` kann `proposal` als relativen Pfad zu einem zweiten Skript
+nennen. Es laeuft nach dem Formular und vor der Zusammenfassung, mit
+derselben Befehlszeile und einer Kontextdatei, deren `proposalFile` auf eine
+noch nicht vorhandene Datei zeigt. Das Skript
+
+- darf ausserhalb seines Laufverzeichnisses nichts anlegen oder aendern,
+- schreibt `proposalFile` als UTF-8 ohne BOM:
+  `{ "text": "<fuer die Zusammenfassung>", "data": <beliebig> }`,
+- meldet Fortschritt und Ergebnis wie eine Aktion.
+
+Nur bei `status: "success"` und nicht leerem `text` zeigt der
+Ausfuehrungsprozess die Zusammenfassung mit dem Vorschlag; sonst endet er
+ohne Aenderung. Nach "Erstellen" erhaelt die Aktion denselben Pfad in
+`proposalFile` und setzt `data` um, ohne das Modell erneut zu fragen. So
+entsteht genau das, was in der Zusammenfassung stand. Die Aktion prueft
+`data` vor der Umsetzung noch einmal.
+
+## 13. Hilfsmodul `SpawnNew.Action.psm1`
+
+Aktionen koennen das Modul aus `appDirectory` laden und so den Vertrag
+einhalten, ohne ihn selbst auszuprogrammieren:
+
+| Funktion | Zweck |
+|---|---|
+| `Initialize-SpawnNewAction` | Kontext lesen, Laufzustand anlegen |
+| `Get-SpawnNewActionField`, `Test-SpawnNewActionFlag` | Formularwerte |
+| `Write-SpawnNewActionStep`, `Write-SpawnNewActionNote` | Schritt, Hinweis, Warnung |
+| `New-SpawnNewActionFolder`, `Write-SpawnNewActionText` | Ordner und Dateien mit Meldung, ohne stilles Ueberschreiben |
+| `New-SpawnNewActionDocument` | Dokument aus Vorlage, Markdown oder Word |
+| `Assert-SpawnNewActionEndpoint`, `Invoke-SpawnNewActionChat` | KI-Endpunkt pruefen und fragen |
+| `Write-SpawnNewActionDraft` | Modellausgabe als gekennzeichneten Entwurf mit freiem Namen ablegen |
+| `Test-SpawnNewActionCancel` | Abbruch angefordert? |
+| `Complete-SpawnNewAction` | Ergebnisdatei schreiben; liefert den Rueckgabewert |
+| `Complete-SpawnNewActionCancelled`, `Complete-SpawnNewActionFailed` | dasselbe fuer Abbruch und Fehler |
+
+Die `Complete`-Funktionen beenden den Prozess nicht selbst; das Skript ruft
+`exit (Complete-SpawnNewAction ...)`. Eine Warnung ueber
+`Write-SpawnNewActionNote -Warning` macht aus `success` ein `partial`.

@@ -1,7 +1,8 @@
 ﻿# Invoke-SpawnAction.ps1
-# Version 1.0 | Aktion 1: Ordnerstruktur.
+# Version 1.1 | Aktion 1: Ordnerstruktur.
 # Zweck  : Zielordner anlegen, die Unterordner der gewaehlten Strukturvorlage
-#          erzeugen und eine README.md schreiben.
+#          erzeugen, deklarierte NTFS-Rechte setzen und eine README.md
+#          schreiben.
 # Input  : -ContextFile Kontextdatei nach docs/Aktionsvertrag.md Abschnitt 2.
 # Output : Fortschritt in progressFile, Ergebnis in resultFile.
 #          Rueckgabewert nach Abschnitt 5 des Vertrags.
@@ -48,6 +49,48 @@ function Test-Cancelled {
     return [System.IO.File]::Exists($context.cancelFile)
 }
 
+function Get-RuleIdentity {
+    # AKTUELLER_BENUTZER, eine SID mit fuehrendem * oder ein Kontoname.
+    # SIDs sind sprachunabhaengig; 'Administratoren' heisst nur auf
+    # deutschem Windows so.
+    param([string]$Name)
+
+    if ($Name -eq 'AKTUELLER_BENUTZER') { return [System.Security.Principal.WindowsIdentity]::GetCurrent().User }
+    if ($Name.StartsWith('*')) { return (New-Object System.Security.Principal.SecurityIdentifier($Name.Substring(1))) }
+    return (New-Object System.Security.Principal.NTAccount($Name))
+}
+
+function Grant-FolderRight {
+    # Setzt die deklarierten NTFS-Rechte selbst. Ein Kopieren ueber den
+    # Explorer wuerde nur die Rechte des Elternordners erben.
+    param([string]$Path, $Rule)
+
+    $directory = New-Object System.IO.DirectoryInfo($Path)
+    $acl = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access)
+    $inherit = [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'
+    $none = [System.Security.AccessControl.PropagationFlags]::None
+
+    $trennen = ($Rule.PSObject.Properties.Name -contains 'vererbungTrennen') -and [bool]$Rule.vererbungTrennen
+    if ($trennen) {
+        $acl.SetAccessRuleProtection($true, $false)
+        foreach ($existing in @($acl.GetAccessRules($true, $false, [System.Security.Principal.SecurityIdentifier]))) { [void]$acl.RemoveAccessRuleSpecific($existing) }
+        $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+        $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($me, 'FullControl', $inherit, $none, 'Allow')))
+    }
+
+    $regeln = @()
+    if ($Rule.PSObject.Properties.Name -contains 'regeln') { $regeln = @($Rule.regeln) }
+    foreach ($regel in $regeln) {
+        $typ = 'Allow'
+        if ($regel.PSObject.Properties.Name -contains 'typ') { $typ = [string]$regel.typ }
+        $identity = Get-RuleIdentity -Name ([string]$regel.identitaet)
+        $right = [System.Security.AccessControl.FileSystemRights]([string]$regel.recht)
+        $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($identity, $right, $inherit, $none, $typ)))
+    }
+
+    $directory.SetAccessControl($acl)
+}
+
 try {
     Write-ProgressLine -Entry @{ type = 'step'; text = 'Zielordner anlegen'; percent = 10 }
 
@@ -66,19 +109,29 @@ try {
         exit 2
     }
 
-    $ordner = @($vorlagen.$name)
+    # Eintraege sind Ordnernamen oder Objekte mit pfad und rechte.
+    $eintraege = @($vorlagen.$name | ForEach-Object {
+            if ($_ -is [string]) { [pscustomobject]@{ Pfad = $_; Rechte = $null } }
+            else { [pscustomobject]@{ Pfad = [string]$_.pfad; Rechte = $(if ($_.PSObject.Properties.Name -contains 'rechte') { $_.rechte } else { $null }) } }
+        })
+    $ordner = @($eintraege | ForEach-Object { $_.Pfad })
     Write-ProgressLine -Entry @{ type = 'step'; text = ('Unterordner der Vorlage ' + $name + ' anlegen'); percent = 40 }
 
-    foreach ($eintrag in $ordner) {
+    foreach ($eintrag in $eintraege) {
         if (Test-Cancelled) {
             Write-Result -Status 'cancelled' -Message 'Abbruch nach dem Anlegen der bisherigen Ordner.'
             exit 3
         }
 
-        $pfad = Join-Path $context.targetPath $eintrag
+        $pfad = Join-Path $context.targetPath $eintrag.Pfad
         if (-not [System.IO.Directory]::Exists($pfad)) {
             [void](New-Item -ItemType Directory -Path $pfad -Force)
             Add-Created -Kind 'folder' -Path $pfad
+        }
+
+        if ($null -ne $eintrag.Rechte) {
+            Grant-FolderRight -Path $pfad -Rule $eintrag.Rechte
+            Write-ProgressLine -Entry @{ type = 'info'; text = ('Rechte gesetzt: ' + $eintrag.Pfad) }
         }
     }
 

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0",
+  "comment": "{{name}}.config.json - Konfiguration zu {{name}}.ps1. Werte unter settings sind frei waehlbar.",
+  "settings": {}
+}

@@ -1,11 +1,13 @@
-<!-- SpawnNew.md | Version 1.4 | 26.10.2026 -->
+<!-- SpawnNew.md | Version 1.5 | 26.10.2026 -->
 
 # SpawnNew
 
-Konzept und Anforderungen, Version 1.4 vom 26.10.2026.
-Status: Ausführungsprozess und Katalogauflösung umgesetzt und geprüft;
-Installation mit Menüregistrierung sowie Aktionen 1 und 2 umgesetzt;
-Explorer-Erweiterung, neun mitgelieferte Aktionen und KI-Anbindung offen.
+Konzept und Anforderungen, Version 1.5 vom 26.10.2026.
+Status: Ausführungsprozess, Katalogauflösung, alle elf Aktionen,
+Dokumenterzeugung, KI-Anbindung, Geheimnisse, NTFS-Rechte, Installation und
+Verwaltungsbefehle umgesetzt und automatisch geprüft. Offen sind die
+Explorer-Erweiterung für die erste Menüebene unter Windows 11 und die
+Abnahme von Hand auf Windows 10 und 11.
 
 ## 1. Ziel
 
@@ -88,7 +90,7 @@ Die erste Version enthält genau elf mitgelieferte Aktionen:
 | 15 | Projekt abschließen | Arbeitet im vorhandenen Ordner. Abschlussvermerk, Dateimanifest mit SHA-256 je Datei, optional ZIP und Verschieben in ein Archivverzeichnis |
 | 17 | Ordnerstruktur aus Beschreibung | Freitextbeschreibung, Zielpfad; ein Sprachmodell schlägt die Struktur vor, der Vorschlag erscheint in der Zusammenfassung und wird erst nach „Erstellen“ angelegt |
 | 18 | Datei zusammenfassen | Beliebige Textdatei, Modell; Zusammenfassung als Entwurfsdatei neben der Quelle |
-| 19 | Ordner dokumentieren | Zielordner, Modell; `README.md` als Entwurf aus Dateiliste und erkennbarem Zweck |
+| 19 | Ordner dokumentieren | Zielordner, Modell; README als Entwurf (`README.Entwurf.md`) aus Dateiliste und erkennbarem Zweck; eine vorhandene `README.md` bleibt unberührt |
 
 Hyper-V, Webprojekte und weitere Aktionen bleiben Erweiterungsmöglichkeiten. Sie sind nicht Bestandteil der elf mitgelieferten Aktionen. Git-Projekte werden lokal erstellt; Remote-Erstellung und Veröffentlichung gehören nicht zum Standardablauf.
 
@@ -128,7 +130,7 @@ Ein Aktionsordner wird nur dann als Aktion erkannt, wenn sein Einstiegspunkt vor
 | `plannedSteps` | Für die Zusammenfassung geeignete Schrittbeschreibung |
 | `cleanup` | Optionaler relativer Einstiegspunkt für das Aufräumen nach Teilfehlern |
 
-Die genauen Werte, Vorgaben und Feldtypen stehen in `docs/Dateiliste.md` Abschnitt 8, der Ausführungsvertrag in `docs/Aktionsvertrag.md`. Die KI-Anbindung wird mit Umsetzungsschritt 7 in `docs/KI-Anbindung.md` festgelegt; bis dahin gilt Abschnitt 9.
+Die genauen Werte, Vorgaben und Feldtypen stehen in `docs/Dateiliste.md` Abschnitt 8, der Ausführungsvertrag in `docs/Aktionsvertrag.md`, die KI-Anbindung in `docs/KI-Anbindung.md`.
 
 `requiresAdmin: true` darf nicht allein aus einer Beschreibung zu einer erhöhten Ausführung führen, wenn die Aktion die Rechte nicht tatsächlich benötigt. Die Anwendung zeigt die deklarierte Rechteanforderung vor dem Start an und fordert erhöhte Rechte erst nach ausdrücklicher Bestätigung an.
 
@@ -239,7 +241,7 @@ Vor der Ausführung zeigt SpawnNew den vollständigen Einzeiler, das Ziel und di
 
 Konfiguration, persönliche Aktionen und Geheimnisse werden von installierten Programmdateien getrennt. Ein SpawnNew-Update darf diese nicht überschreiben. Deinstallation entfernt die Menüregistrierung und SpawnNew-eigene Programmdateien; benutzereigene Aktionen, Quellen, Konfiguration und Geheimnisse bleiben standardmäßig erhalten. Der Benutzer muss vor der Deinstallation ausdrücklich über verbleibende Daten informiert werden.
 
-Eine Möglichkeit zur Quellen- und Endpunktkonfiguration muss ohne eigenständigen Aktionsstarter erreichbar sein, beispielsweise über einen separaten Konfigurationsbefehl im SpawnNew-Untermenü oder über die installierte Anwendung. Die gewählte Darstellung und ihre Rechteanforderungen werden vor Implementierung festgelegt.
+Eine Möglichkeit zur Quellen- und Endpunktkonfiguration muss ohne eigenständigen Aktionsstarter erreichbar sein, beispielsweise über einen separaten Konfigurationsbefehl im SpawnNew-Untermenü oder über die installierte Anwendung. Festgelegt ist der Menüeintrag „SpawnNew konfigurieren“ unterhalb einer Trennlinie: Übersicht der Schichten, Quellen, Endpunkte und Geheimnisnamen, Bearbeiten der Benutzerkonfiguration, Speichern und Entfernen von Geheimnissen, Test der Endpunkte und Neueinlesen des Menüs. Er braucht normale Benutzerrechte; nur das Neueinlesen bei einer Installation für alle Benutzer verlangt Administratorrechte.
 
 ## 12. Entwicklungsregeln
 
@@ -292,15 +294,15 @@ Eine Möglichkeit zur Quellen- und Endpunktkonfiguration muss ohne eigenständig
 | 1 | Dateinamen, Konfigurationsspeicher, Quellenpriorität, Aktions-ID-Regeln, Einzeiler, Schnittstellenverträge festlegen | fertig |
 | 2 | Minimalen Explorer-Prototyp auf Windows 10 und 11 prüfen: Menüregistrierung, direkte Anzeige, Pfadübergabe | offen |
 | 3 | Aktionsquellen, Prioritätsauflösung, IDs, Nachladen, Cache-Verhalten, Beschreibungsprüfung | fertig und geprüft |
-| 4 | Einheitliche Formulare, Zusammenfassung, getrennter PowerShell-Start | fertig; WinForms auf Windows noch nicht erprobt |
-| 5 | Fortschritt, Fehlerbehandlung, Rechte, optionale Aufräumfunktion | fertig; WinForms auf Windows noch nicht erprobt |
-| 6 | Dokumenterzeugung mit Platzhaltern in Markdown und `.docx` | offen |
-| 7 | KI-Anbindung Stufe 1: lokaler OpenAI-kompatibler Endpunkt, Voraussetzungsprüfung, Aktionen 17 bis 19 | offen |
-| 8 | KI-Anbindung Stufe 2: Webendpunkt mit verschlüsselt gespeichertem Schlüssel | offen |
-| 9 | NTFS-Rechte aus der Vorlage setzen | offen |
-| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | 2 von 11 (Ordnerstruktur, Git-Projekt) |
-| 11 | Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | Installation, Aktualisierung und Deinstallation fertig in der Registrierungsstufe; Konfigurationszugriff offen |
-| 12 | Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus, Fehleranzeige | Katalogausgabe fertig; Registrierung und Bestätigung offen |
+| 4 | Einheitliche Formulare, Zusammenfassung, getrennter PowerShell-Start | fertig; Ablauf mit Stellvertretern für die Fenster geprüft, Fenster von Hand noch nicht erprobt |
+| 5 | Fortschritt, Fehlerbehandlung, Rechte, optionale Aufräumfunktion | fertig; Fenster von Hand noch nicht erprobt |
+| 6 | Dokumenterzeugung mit Platzhaltern in Markdown und `.docx` | fertig und geprüft, auch eigene `.docx`-Vorlagen |
+| 7 | KI-Anbindung Stufe 1: lokaler OpenAI-kompatibler Endpunkt, Voraussetzungsprüfung, Aktionen 17 bis 19 | fertig und gegen einen Testserver geprüft |
+| 8 | KI-Anbindung Stufe 2: Webendpunkt mit verschlüsselt gespeichertem Schlüssel | fertig und geprüft |
+| 9 | NTFS-Rechte aus der Vorlage setzen | fertig und geprüft (Aktion 1) |
+| 10 | Elf mitgelieferte Aktionen und Dokumentvorlagen liefern | fertig, 11 von 11 |
+| 11 | Installation, Aktualisierung, Konfigurationszugriff, Deinstallation | fertig in der Registrierungsstufe; Konfiguration über den Menüeintrag „SpawnNew konfigurieren“ |
+| 12 | Menüeinträge für Installation und Aktualisierung mit Bestätigung, Rückgabestatus, Fehleranzeige | fertig |
 | 13 | Abnahmekriterien auf Windows 10 und 11 mit erreichbaren und nicht erreichbaren Quellen prüfen | offen |
 
 ## 15. Name und Marktlage

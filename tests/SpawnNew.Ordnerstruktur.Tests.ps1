@@ -149,3 +149,29 @@ Add-SpawnNewTest 'Die Aktion schreibt nichts auf stdout' {
 
     Confirm-SpawnNewValue -Label 'Ausgabe' -Actual $run.Output -Expected ''
 }
+
+Add-SpawnNewTest 'Vorlage mit Rechten setzt die NTFS-Rechte selbst' {
+    $Work = Get-SpawnNewTestDirectory
+    $run = Invoke-TestAction -Work $Work -Value @{ name = 'Geheim'; vorlage = 'Projekt mit vertraulichem Ordner'; zweck = '' }
+
+    Confirm-SpawnNewValue -Label 'Status' -Actual $run.Result.Status -Expected 'success'
+
+    $folder = Join-Path $run.Target '09 Vertraulich'
+    $acl = (New-Object System.IO.DirectoryInfo($folder)).GetAccessControl()
+    $rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
+    $sids = @($rules | ForEach-Object { $_.IdentityReference.Value })
+    $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+
+    Confirm-SpawnNewValue -Label 'Vererbung getrennt' -Actual $acl.AreAccessRulesProtected -Expected $true
+    Confirm-SpawnNewValue -Label 'nichts geerbt' -Actual @($rules | Where-Object { $_.IsInherited }).Count -Expected 0
+    Confirm-SpawnNewCondition -Label 'aktueller Benutzer' -Condition ($sids -contains $me)
+    Confirm-SpawnNewCondition -Label 'SYSTEM' -Condition ($sids -contains 'S-1-5-18')
+    Confirm-SpawnNewCondition -Label 'Administratoren' -Condition ($sids -contains 'S-1-5-32-544')
+    Confirm-SpawnNewCondition -Label 'Benutzer nicht' -Condition ($sids -notcontains 'S-1-5-32-545')
+
+    $plain = (New-Object System.IO.DirectoryInfo((Join-Path $run.Target '01 Planung'))).GetAccessControl()
+    Confirm-SpawnNewValue -Label 'andere Ordner erben' -Actual $plain.AreAccessRulesProtected -Expected $false
+
+    $info = @($run.Progress | Where-Object { $_.Text -match 'Rechte gesetzt' })
+    Confirm-SpawnNewValue -Label 'gemeldet' -Actual $info.Count -Expected 1
+}

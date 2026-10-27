@@ -1,5 +1,5 @@
 ﻿# Install-SpawnNew.ps1
-# Version 1.1 | Installiert, aktualisiert und entfernt SpawnNew.
+# Version 1.2 | Installiert, aktualisiert und entfernt SpawnNew.
 # Zweck  : Programmdateien in das Installationsverzeichnis kopieren und das
 #          Kontextmenue registrieren. Ein erneuter Lauf ersetzt die
 #          Programmdateien vollstaendig. Benutzerdaten bleiben unberuehrt.
@@ -95,7 +95,8 @@ $catalog = Get-SpawnNewCatalog -Config $config
 # Aktionen, die es nicht mehr gibt, und Reste aelterer Fassungen.
 Remove-SpawnNewRegistration -Root $root
 
-$entries = Get-SpawnNewRegistryEntry -Action $catalog.Actions -AppDirectory $appDirectory -Root $root
+$commands = Get-SpawnNewMenuCommand -Config $config
+$entries  = Get-SpawnNewRegistryEntry -Action $catalog.Actions -AppDirectory $appDirectory -Root $root -Command $commands
 Set-SpawnNewRegistration -Entry $entries
 
 Write-Output ''
@@ -104,6 +105,7 @@ Write-Output ('Aktionen im Menue: ' + @($catalog.Actions).Count)
 foreach ($action in $catalog.Actions) {
     Write-Output ('  ' + $action.Title + '  [' + $action.Id + ']  aus ' + $action.SourceName)
 }
+Write-Output ('Verwaltungsbefehle: ' + (($commands | ForEach-Object { $_.Title }) -join ', '))
 
 $problems = @($catalog.Diagnostics | Where-Object { $_.Severity -ne 'info' })
 if ($problems.Count -gt 0) {

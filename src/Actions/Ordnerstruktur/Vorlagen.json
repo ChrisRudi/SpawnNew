@@ -1,8 +1,24 @@
 {
   "schemaVersion": 1,
-  "comment": "Vorlagen.json - Unterordner je Strukturvorlage fuer die Aktion Ordnerstruktur.",
+  "comment": "Vorlagen.json - Unterordner je Strukturvorlage fuer die Aktion Ordnerstruktur. Ein Eintrag ist ein Ordnername oder ein Objekt mit pfad und rechte. rechte.vererbungTrennen entfernt geerbte Rechte; rechte.regeln vergibt Rechte an identitaet (AKTUELLER_BENUTZER, eine SID wie *S-1-5-18 oder ein Kontoname), recht (FullControl, Modify, ReadAndExecute, Read, Write) und optional typ (Allow, Deny). Bei getrennter Vererbung behaelt der aktuelle Benutzer immer Vollzugriff.",
   "vorlagen": {
     "Projekt": [ "01 Planung", "02 Umsetzung", "03 Dokumentation", "04 Abgabe" ],
+    "Projekt mit vertraulichem Ordner": [
+      "01 Planung",
+      "02 Umsetzung",
+      "03 Dokumentation",
+      {
+        "pfad": "09 Vertraulich",
+        "rechte": {
+          "vererbungTrennen": true,
+          "regeln": [
+            { "identitaet": "AKTUELLER_BENUTZER", "recht": "FullControl" },
+            { "identitaet": "*S-1-5-18", "recht": "FullControl" },
+            { "identitaet": "*S-1-5-32-544", "recht": "FullControl" }
+          ]
+        }
+      }
+    ],
     "Unterricht": [ "Arbeitsblaetter", "Loesungen", "Material", "Rueckgaben" ],
     "Minimal": [ "Dokumente" ]
   }

@@ -206,6 +206,185 @@ function Add-SpawnNewTestAction {
     return $Directory
 }
 
+function Invoke-SpawnNewTestAction {
+    <#
+    .SYNOPSIS
+    Startet eine mitgelieferte Aktion in einem eigenen Prozess, wie der
+    Ausfuehrungsprozess es tut, und liefert Rueckgabewert, Ausgabe,
+    Fortschritt und Ergebnis.
+    .DESCRIPTION
+    Braucht die Module Config und Runner in der Testsitzung.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Folder,
+        [Parameter(Mandatory)][string]$Id,
+        [Parameter(Mandatory)][hashtable]$Value,
+        [Parameter(Mandatory)][string]$TargetPath,
+        [bool]$TargetExisted = $false,
+        [ValidateSet('fail', 'rename', 'overwrite')][string]$ConflictPolicy = 'fail',
+        $Llm = $null,
+        [string]$ProposalFile = '',
+        [string]$Script = 'Invoke-SpawnAction.ps1',
+        [string]$ActionDirectory = '',
+        [switch]$Cancel
+    )
+
+    $repo      = Split-Path -Parent $PSScriptRoot
+    $hostDir   = Join-Path (Join-Path $repo 'src') 'Host'
+    $actionDir = if ($ActionDirectory) { $ActionDirectory } else { Join-Path (Join-Path (Join-Path $repo 'src') 'Actions') $Folder }
+    $action    = [pscustomobject]@{ Id = $Id; ActionDirectory = $actionDir }
+    $run       = Get-SpawnNewRun -Root $script:WorkDirectory
+
+    [void](Write-SpawnNewContextFile -Run $run -Action $action -ExplorerPath (Split-Path -Parent $TargetPath) -TargetPath $TargetPath -TargetExisted $TargetExisted -ConflictPolicy $ConflictPolicy -Value $Value -AppDirectory $hostDir -Llm $Llm -ProposalFile $ProposalFile)
+    if ($Cancel) { Request-SpawnNewCancel -Run $run }
+
+    $shell  = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    $output = & $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $actionDir $Script) -ContextFile $run.ContextFile 2>&1
+    $code   = $LASTEXITCODE
+
+    return [pscustomobject]@{
+        Run      = $run
+        Target   = $TargetPath
+        ExitCode = $code
+        Output   = (@($output | ForEach-Object { [string]$_ }) -join "`r`n")
+        Progress = @((Read-SpawnNewProgress -Path $run.ProgressFile -Offset 0).Entry)
+        Result   = (Read-SpawnNewResult -Run $run)
+    }
+}
+
+function Get-SpawnNewTestEndpoint {
+    <#
+    .SYNOPSIS
+    Endpunktobjekt wie aus Get-SpawnNewConfig, fuer Kontextdateien in Tests.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Url,
+        [string]$Secret = '',
+        [int]$TimeoutSeconds = 20
+    )
+
+    return [pscustomobject]@{ Name = 'Test'; BaseUrl = $Url; Model = 'testmodell'; TimeoutSeconds = $TimeoutSeconds; Secret = $Secret }
+}
+
+function Start-SpawnNewFakeLlm {
+    <#
+    .SYNOPSIS
+    Startet einen OpenAI-kompatiblen Testserver auf 127.0.0.1.
+    .DESCRIPTION
+    Beantwortet GET .../models und POST .../chat/completions mit der
+    vorgegebenen Antwort und zeichnet jede Anfrage mit Methode, Pfad,
+    Authorization-Kopf und Inhalt auf. Laeuft in einem eigenen Runspace,
+    damit auch Aktionsprozesse ihn erreichen. Ein TcpListener braucht im
+    Gegensatz zu HttpListener keine URL-Reservierung.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [AllowEmptyString()][string]$Reply = 'Antwort des Testmodells',
+        [int]$Status = 200,
+        [int]$DelayMs = 0
+    )
+
+    if (-not $PSCmdlet.ShouldProcess('127.0.0.1', 'Testserver starten')) { return }
+
+    $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 0)
+    $listener.Start()
+    $requests = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList))
+
+    $worker = {
+        param($Listener, $Requests, $Reply, $Status, $DelayMs)
+
+        $latin = [System.Text.Encoding]::GetEncoding(28591)
+        while ($true) {
+            try { $client = $Listener.AcceptTcpClient() }
+            catch { break }
+
+            try {
+                $stream = $client.GetStream()
+                $data   = New-Object System.IO.MemoryStream
+                $buffer = New-Object byte[] 65536
+                $end    = -1
+                while ($end -lt 0) {
+                    $read = $stream.Read($buffer, 0, $buffer.Length)
+                    if ($read -le 0) { break }
+                    $data.Write($buffer, 0, $read)
+                    $end = $latin.GetString($data.ToArray()).IndexOf("`r`n`r`n")
+                }
+
+                $head   = $latin.GetString($data.ToArray(), 0, $end)
+                $length = 0
+                $auth   = ''
+                foreach ($line in $head.Split("`n")) {
+                    if ($line -match '^Content-Length:\s*(\d+)') { $length = [int]$Matches[1] }
+                    if ($line -match '^Authorization:\s*(.*?)\s*$') { $auth = $Matches[1] }
+                }
+                while ($data.Length -lt ($end + 4 + $length)) {
+                    $read = $stream.Read($buffer, 0, $buffer.Length)
+                    if ($read -le 0) { break }
+                    $data.Write($buffer, 0, $read)
+                }
+
+                $bytes = $data.ToArray()
+                $body  = [System.Text.Encoding]::UTF8.GetString($bytes, $end + 4, $bytes.Length - $end - 4)
+                $first = $head.Split("`n")[0].Trim().Split(' ')
+                [void]$Requests.Add([pscustomobject]@{ Method = $first[0]; Path = $first[1]; Authorization = $auth; Body = $body })
+
+                if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
+
+                if ($first[1] -like '*/models') {
+                    $json = '{"object":"list","data":[{"id":"testmodell","object":"model"}]}'
+                }
+                else {
+                    $answer = [pscustomobject]@{ choices = @([pscustomobject]@{ index = 0; message = [pscustomobject]@{ role = 'assistant'; content = $Reply } }) }
+                    $json = ConvertTo-Json -InputObject $answer -Depth 5 -Compress
+                }
+
+                $payload = [System.Text.Encoding]::UTF8.GetBytes($json)
+                $header  = 'HTTP/1.1 ' + $Status + " X`r`nContent-Type: application/json; charset=utf-8`r`nContent-Length: " + $payload.Length + "`r`nConnection: close`r`n`r`n"
+                $headerBytes = $latin.GetBytes($header)
+                $stream.Write($headerBytes, 0, $headerBytes.Length)
+                $stream.Write($payload, 0, $payload.Length)
+                $stream.Flush()
+            }
+            catch {
+                [void]$Requests.Add([pscustomobject]@{ Method = 'ERROR'; Path = ''; Authorization = ''; Body = $_.Exception.Message })
+            }
+            finally {
+                $client.Close()
+            }
+        }
+    }
+
+    $shell = [powershell]::Create()
+    [void]$shell.AddScript($worker).AddArgument($listener).AddArgument($requests).AddArgument($Reply).AddArgument($Status).AddArgument($DelayMs)
+    $handle = $shell.BeginInvoke()
+
+    return [pscustomobject]@{
+        Url      = ('http://127.0.0.1:' + $listener.LocalEndpoint.Port + '/v1')
+        Requests = $requests
+        Listener = $listener
+        Shell    = $shell
+        Handle   = $handle
+    }
+}
+
+function Stop-SpawnNewFakeLlm {
+    <#
+    .SYNOPSIS
+    Beendet einen Testserver aus Start-SpawnNewFakeLlm.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param([Parameter(Mandatory)][AllowNull()]$Server)
+
+    if ($null -eq $Server) { return }
+    if (-not $PSCmdlet.ShouldProcess($Server.Url, 'Testserver beenden')) { return }
+
+    $Server.Listener.Stop()
+    [void]$Server.Handle.AsyncWaitHandle.WaitOne(2000)
+    $Server.Shell.Dispose()
+}
+
 function Get-SpawnNewTestFile {
     <#
     .SYNOPSIS
@@ -294,4 +473,4 @@ function Invoke-SpawnNewTest {
     return $failures.Count
 }
 
-Export-ModuleMember -Function Write-SpawnNewTestLine, Get-SpawnNewTestDirectory, Add-SpawnNewTest, Confirm-SpawnNewValue, Test-SpawnNewNumber, Confirm-SpawnNewCondition, Confirm-SpawnNewMatch, Import-SpawnNewHostModule, ConvertTo-SpawnNewJsonText, Add-SpawnNewTestFile, Add-SpawnNewTestAction, Get-SpawnNewTestFile, Invoke-SpawnNewTest
+Export-ModuleMember -Function Write-SpawnNewTestLine, Get-SpawnNewTestDirectory, Add-SpawnNewTest, Confirm-SpawnNewValue, Test-SpawnNewNumber, Confirm-SpawnNewCondition, Confirm-SpawnNewMatch, Import-SpawnNewHostModule, ConvertTo-SpawnNewJsonText, Add-SpawnNewTestFile, Add-SpawnNewTestAction, Invoke-SpawnNewTestAction, Get-SpawnNewTestEndpoint, Start-SpawnNewFakeLlm, Stop-SpawnNewFakeLlm, Get-SpawnNewTestFile, Invoke-SpawnNewTest

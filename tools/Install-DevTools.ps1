@@ -1,4 +1,4 @@
-# tools/Install-DevTools.ps1
+﻿# tools/Install-DevTools.ps1
 # Version 1.0 | Richtet die Pruefwerkzeuge fuer SpawnNew ein.
 # Zweck  : PSScriptAnalyzer bereitstellen, auch ohne Zugriff auf die PSGallery.
 # Input  : -Version der Modulversion; -Scope Installationsumfang.

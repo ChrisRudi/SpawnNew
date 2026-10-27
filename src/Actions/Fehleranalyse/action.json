@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.incident",
+  "title": "Fehleranalyse",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "nameTemplate": "{{datum}} {{titel}}",
+  "fields": [
+    { "name": "titel", "label": "Titel", "type": "text", "required": true },
+    { "name": "umgebung", "label": "Umgebung", "type": "multiline", "required": false },
+    { "name": "datum", "label": "Datum", "type": "date", "required": true, "default": "today" },
+    { "name": "entwurf", "label": "Entwurf vom Sprachmodell", "type": "bool", "default": "false" }
+  ],
+  "plannedSteps": [
+    "Ordner 'Datum Titel' anlegen",
+    "Fehleranalyse.md mit Beschreibung, Umgebung, Reproduktion, Ursache und Loesung anlegen",
+    "Ordner Logs, Screenshots und Loesungsnachweis anlegen",
+    "Optional: Fehleranalyse.Entwurf.md mit Pruefschritten vom Sprachmodell anlegen"
+  ]
+}

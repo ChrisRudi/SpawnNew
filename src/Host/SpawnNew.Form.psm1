@@ -87,7 +87,7 @@ function Get-SpawnNewFieldControl {
             $control.Text    = ''
             $control.Width   = 20
         }
-        'choice' {
+        { $_ -eq 'choice' -or $_ -eq 'endpoint' } {
             $control = New-Object System.Windows.Forms.ComboBox
             $control.DropDownStyle = 'DropDownList'
             foreach ($choice in $Field.Choices) { [void]$control.Items.Add($choice) }
@@ -96,10 +96,16 @@ function Get-SpawnNewFieldControl {
         }
         'multiline' {
             $control = New-Object System.Windows.Forms.TextBox
-            $control.Multiline = $true
-            $control.Height    = 60
-            $control.Text      = $default
-            $control.Width     = $script:ControlWidth
+            $control.Multiline  = $true
+            $control.ScrollBars = 'Vertical'
+            $control.Height     = 80
+            $control.Text       = $default
+            $control.Width      = $script:ControlWidth
+        }
+        'file' {
+            $control = New-Object System.Windows.Forms.TextBox
+            $control.Text  = $default
+            $control.Width = $script:ControlWidth - 90
         }
         default {
             $control = New-Object System.Windows.Forms.TextBox
@@ -182,6 +188,24 @@ function Show-SpawnNewActionForm {
         $control = Get-SpawnNewFieldControl -Field $entry -Top $rows
         $form.Controls.AddRange(@($label, $control))
         $controls[$entry.Name] = $control
+
+        if ($entry.Type -eq 'file') {
+            $pick = New-Object System.Windows.Forms.Button
+            $pick.Text  = 'Wählen'
+            $pick.Left  = $control.Left + $control.Width + 8
+            $pick.Top   = $rows - 1
+            $pick.Width = 82
+            $box = $control
+            $onPick = {
+                $dialog = New-Object System.Windows.Forms.OpenFileDialog
+                $dialog.InitialDirectory = $pathBox.Text
+                $dialog.Filter = 'Textdateien|*.txt;*.md;*.log;*.csv;*.json;*.xml;*.ps1;*.psm1;*.cs;*.py;*.js;*.ts;*.ini;*.cfg;*.yaml;*.yml|Alle Dateien|*.*'
+                if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $box.Text = $dialog.FileName }
+                $dialog.Dispose()
+            }
+            $pick.Add_Click($onPick.GetNewClosure())
+            $form.Controls.Add($pick)
+        }
         $rows += [System.Math]::Max($script:RowHeight, $control.Height + 6)
     }
 

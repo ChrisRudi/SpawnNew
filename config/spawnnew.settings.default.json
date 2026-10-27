@@ -1,10 +1,21 @@
 {
   "schemaVersion": 1,
-  "configVersion": "1.1",
+  "configVersion": "1.2",
   "comment": "config/spawnnew.settings.default.json - mitgelieferte Standardkonfiguration. Benutzerwerte gehoeren nach %LOCALAPPDATA%\\SpawnNew\\spawnnew.settings.json und werden nie von einem Update ueberschrieben.",
   "sourceTimeoutMs": 1500,
   "cacheMaxAgeMinutes": 1440,
   "scanDepth": 3,
+  "llm": {
+    "defaultEndpoint": "Lokal",
+    "endpoints": [
+      {
+        "name": "Lokal",
+        "baseUrl": "http://localhost:11434/v1",
+        "model": "llama3.2",
+        "timeoutSeconds": 180
+      }
+    ]
+  },
   "sources": [
     {
       "name": "Persoenliche Aktionen",

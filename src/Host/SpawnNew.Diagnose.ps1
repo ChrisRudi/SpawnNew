@@ -7,9 +7,13 @@
 # Deps   : Windows PowerShell 5.1, die Module in diesem Verzeichnis.
 
 [CmdletBinding()]
-param([string]$AppDirectory = $PSScriptRoot)
+param([string]$AppDirectory = '')
 
 $ErrorActionPreference = 'Stop'
+
+# $PSScriptRoot ist in Windows PowerShell 5.1 bei -File mit CmdletBinding in
+# den param()-Vorgaben leer; so startet der Explorer dieses Skript.
+if (-not $AppDirectory) { $AppDirectory = $PSScriptRoot }
 
 foreach ($name in @('Config', 'Catalog', 'Resolve', 'Register')) {
     Import-Module (Join-Path $AppDirectory ('SpawnNew.' + $name + '.psm1')) -Force -ErrorAction Stop

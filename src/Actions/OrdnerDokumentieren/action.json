@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.documentfolder",
+  "title": "Ordner dokumentieren",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "inPlace",
+  "fields": [
+    { "name": "zweck", "label": "Zweck, falls bekannt", "type": "text", "required": false },
+    { "name": "modell", "label": "Modell", "type": "endpoint", "required": true }
+  ],
+  "prerequisites": [
+    { "kind": "endpoint", "hint": "Lokales Modell starten oder unter SpawnNew konfigurieren einen Endpunkt eintragen." }
+  ],
+  "plannedSteps": [
+    "Dateiliste des Ordners lesen, ohne .git, node_modules, bin und obj",
+    "Kurze Auszuege aus README, Projekt- und Skriptdateien lesen",
+    "Dateiliste und Auszuege an das gewaehlte Sprachmodell senden",
+    "README.Entwurf.md als gekennzeichneten Entwurf im Ordner anlegen; nichts wird ueberschrieben"
+  ]
+}

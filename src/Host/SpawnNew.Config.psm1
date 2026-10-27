@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Config.psm1
-# Version 1.0 | Konfiguration von SpawnNew laden und normalisieren.
+# Version 1.1 | Konfiguration von SpawnNew laden und normalisieren.
 # Zweck  : Die drei Konfigurationsschichten lesen, Pfade aufloesen und eine
 #          nach Prioritaet sortierte, entdoppelte Quellenliste liefern.
 # Input  : Konfigurationsdateien nach docs/Dateiliste.md Abschnitt 7.
@@ -251,6 +251,74 @@ function ConvertTo-SpawnNewCommand {
     }
 }
 
+function ConvertTo-SpawnNewEndpoint {
+    <#
+    .SYNOPSIS
+    Prueft einen Endpunkteintrag der KI-Anbindung. Liefert $null, wenn er
+    unbrauchbar ist. Ein Schluessel steht nie hier, nur der Name des
+    Geheimnisses.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][AllowNull()]$Entry,
+        [Parameter(Mandatory)][string]$LayerPath,
+        [Parameter(Mandatory)][AllowEmptyCollection()][System.Collections.ArrayList]$Diagnostics
+    )
+
+    $name = ''
+    $url  = ''
+    if (Test-SpawnNewProperty $Entry 'name')    { $name = ([string]$Entry.name).Trim() }
+    if (Test-SpawnNewProperty $Entry 'baseUrl') { $url  = ([string]$Entry.baseUrl).Trim() }
+
+    if ($name.Length -eq 0 -or $url -notmatch '^https?://') {
+        Add-SpawnNewDiagnostic -Diagnostics $Diagnostics -Severity 'error' -Area 'config' `
+            -Path $LayerPath -Message "KI-Endpunkt '$name' braucht einen Namen und eine baseUrl mit http:// oder https://; er wird übersprungen."
+        return $null
+    }
+
+    $model = ''
+    if (Test-SpawnNewProperty $Entry 'model') { $model = ([string]$Entry.model).Trim() }
+
+    $secret = ''
+    if (Test-SpawnNewProperty $Entry 'secret') { $secret = ([string]$Entry.secret).Trim() }
+
+    $timeout = Get-SpawnNewIntProperty -InputObject $Entry -Name 'timeoutSeconds' -Default 120 -Path $LayerPath -Diagnostics $Diagnostics
+    if ($timeout -le 0) { $timeout = 120 }
+
+    return [pscustomobject]@{
+        Name           = $name
+        BaseUrl        = $url
+        Model          = $model
+        TimeoutSeconds = $timeout
+        Secret         = $secret
+    }
+}
+
+function Get-SpawnNewEndpoint {
+    <#
+    .SYNOPSIS
+    Ein KI-Endpunkt nach Namen, ohne Namen der voreingestellte. Liefert
+    $null, wenn keiner konfiguriert ist.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Config,
+        [string]$Name
+    )
+
+    $endpoints = @($Config.Llm.Endpoints)
+    if ($endpoints.Count -eq 0) { return $null }
+
+    $wanted = $Name
+    if (-not $wanted) { $wanted = $Config.Llm.DefaultEndpoint }
+
+    foreach ($endpoint in $endpoints) {
+        if ($endpoint.Name -eq $wanted) { return $endpoint }
+    }
+    if ($Name) { return $null }
+    return $endpoints[0]
+}
+
 function Get-SpawnNewSourceSortOrder {
     <#
     .SYNOPSIS
@@ -296,6 +364,9 @@ function Get-SpawnNewConfig {
     $install   = $null
     $update    = $null
     $collected = New-Object System.Collections.ArrayList
+    $endpoints = New-Object System.Collections.ArrayList
+    $endpointSeen    = @{}
+    $defaultEndpoint = ''
 
     for ($i = 0; $i -lt $LayerPath.Count; $i++) {
         $layer = Read-SpawnNewJsonFile -Path $LayerPath[$i] -Area 'config' -Diagnostics $Diagnostics
@@ -314,6 +385,25 @@ function Get-SpawnNewConfig {
         }
         if ($null -eq $update -and (Test-SpawnNewProperty $layer 'update')) {
             $update = $layer.update
+        }
+
+        # KI-Endpunkte: wie Quellen ueber alle Schichten verbunden, bei
+        # gleichem Namen gewinnt die erste Schicht.
+        if (Test-SpawnNewProperty $layer 'llm') {
+            $llm = $layer.llm
+            if ($defaultEndpoint.Length -eq 0 -and (Test-SpawnNewProperty $llm 'defaultEndpoint')) {
+                $defaultEndpoint = ([string]$llm.defaultEndpoint).Trim()
+            }
+            if (Test-SpawnNewProperty $llm 'endpoints') {
+                foreach ($entry in @($llm.endpoints)) {
+                    $endpoint = ConvertTo-SpawnNewEndpoint -Entry $entry -LayerPath $LayerPath[$i] -Diagnostics $Diagnostics
+                    if ($null -eq $endpoint) { continue }
+                    $key = $endpoint.Name.ToLowerInvariant()
+                    if ($endpointSeen.ContainsKey($key)) { continue }
+                    $endpointSeen[$key] = $true
+                    [void]$endpoints.Add($endpoint)
+                }
+            }
         }
 
         if (-not (Test-SpawnNewProperty $layer 'sources')) { continue }
@@ -356,8 +446,9 @@ function Get-SpawnNewConfig {
         Sources            = $sources.ToArray()
         Install            = (ConvertTo-SpawnNewCommand -Entry $install -AppDirectory $AppDirectory)
         Update             = (ConvertTo-SpawnNewCommand -Entry $update -AppDirectory $AppDirectory)
+        Llm                = [pscustomobject]@{ DefaultEndpoint = $defaultEndpoint; Endpoints = $endpoints.ToArray() }
         Diagnostics        = $Diagnostics
     }
 }
 
-Export-ModuleMember -Function Add-SpawnNewDiagnostic, Expand-SpawnNewPath, Get-SpawnNewPathKey, Get-SpawnNewDataDirectory, Get-SpawnNewConfigLayerPath, Test-SpawnNewProperty, ConvertTo-SpawnNewCommand, Read-SpawnNewJsonFile, Get-SpawnNewIntProperty, Get-SpawnNewConfig
+Export-ModuleMember -Function Add-SpawnNewDiagnostic, Expand-SpawnNewPath, Get-SpawnNewPathKey, Get-SpawnNewDataDirectory, Get-SpawnNewConfigLayerPath, Test-SpawnNewProperty, ConvertTo-SpawnNewCommand, Read-SpawnNewJsonFile, Get-SpawnNewIntProperty, ConvertTo-SpawnNewEndpoint, Get-SpawnNewEndpoint, Get-SpawnNewConfig

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.closeout",
+  "title": "Projekt abschließen",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "inPlace",
+  "fields": [
+    { "name": "vermerk", "label": "Abschlussvermerk", "type": "multiline", "required": false },
+    { "name": "zip", "label": "ZIP-Archiv erstellen", "type": "bool", "default": "false" },
+    { "name": "verschieben", "label": "In Archivverzeichnis verschieben", "type": "bool", "default": "false" },
+    { "name": "archiv", "label": "Archivverzeichnis", "type": "text", "required": false }
+  ],
+  "plannedSteps": [
+    "Im gewaehlten Ordner selbst arbeiten, nichts ausserhalb ausser ZIP und Archiv",
+    "ABSCHLUSS.md mit Datum, Benutzer und Vermerk anlegen",
+    "MANIFEST-SHA256.txt mit Pruefsumme, Groesse und Pfad jeder Datei anlegen",
+    "Optional: ZIP-Archiv im Archivverzeichnis oder neben dem Ordner anlegen",
+    "Optional: Ordner in das Archivverzeichnis verschieben; ueber Laufwerksgrenzen erst kopieren, pruefen, dann loeschen"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.meeting",
+  "title": "Sitzung",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "nameTemplate": "{{datum}} {{gremium}} {{thema}}",
+  "fields": [
+    { "name": "gremium", "label": "Gremium", "type": "text", "required": true },
+    { "name": "thema", "label": "Thema", "type": "text", "required": true },
+    { "name": "datum", "label": "Datum", "type": "date", "required": true, "default": "today" },
+    { "name": "format", "label": "Ausgabeformat", "type": "choice", "choices": [ "Markdown", "Word" ], "default": "Word" },
+    { "name": "entwurf", "label": "Entwurf vom Sprachmodell", "type": "bool", "default": "false" }
+  ],
+  "plannedSteps": [
+    "Ordner 'Datum Gremium Thema' anlegen",
+    "Tagesordnung, Protokoll und Beschlussliste im gewaehlten Format anlegen",
+    "Ordner Unterlagen anlegen",
+    "Optional: Tagesordnung.Entwurf.md vom Sprachmodell als gekennzeichneten Entwurf anlegen"
+  ]
+}

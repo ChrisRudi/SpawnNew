@@ -1,0 +1,47 @@
+# {{name}}.ps1
+# Version 1.0 | {{kurz}}
+# Zweck  : {{zweck}}
+# Input  : -ConfigFile Pfad zur Konfiguration; ohne Angabe
+#          {{name}}.config.json neben dem Skript, falls vorhanden.
+# Output : Ergebnis auf der Pipeline. Rueckgabewert 0 bei Erfolg, 1 bei Fehler.
+# Deps   : Windows PowerShell 5.1.
+# Datum  : {{datum}}
+
+[CmdletBinding()]
+param(
+    [string]$ConfigFile = ''
+)
+
+$ErrorActionPreference = 'Stop'
+
+# $PSScriptRoot ist in Windows PowerShell 5.1 in param()-Vorgaben noch leer;
+# darum wird der Standardpfad erst hier gebildet.
+if (-not $ConfigFile) { $ConfigFile = Join-Path $PSScriptRoot '{{name}}.config.json' }
+
+function Read-Configuration {
+    <#
+    .SYNOPSIS
+    Liest die JSON-Konfiguration. Ohne Datei gelten die Vorgaben.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        Write-Verbose "Keine Konfiguration unter $Path; es gelten die Vorgaben."
+        return [pscustomobject]@{ settings = [pscustomobject]@{} }
+    }
+    return (ConvertFrom-Json ([System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)))
+}
+
+try {
+    $config = Read-Configuration -Path $ConfigFile
+    Write-Verbose ('Konfiguration geladen, Version ' + $config.version)
+
+    # Hier beginnt die eigentliche Arbeit.
+
+    exit 0
+}
+catch {
+    Write-Error -Message $_.Exception.Message -ErrorAction Continue
+    exit 1
+}

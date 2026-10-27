@@ -1,4 +1,4 @@
-# tools/PSScriptAnalyzerSettings.psd1
+﻿# tools/PSScriptAnalyzerSettings.psd1
 # Version 1.0 | PSScriptAnalyzer-Regelsatz fuer SpawnNew.
 # Zweck  : Prueft den gesamten PowerShell-Code gegen Windows PowerShell 5.1.
 # Input  : keiner, wird von tools/Invoke-Lint.ps1 uebergeben.

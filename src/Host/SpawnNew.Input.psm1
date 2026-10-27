@@ -1,5 +1,5 @@
 ﻿# SpawnNew.Input.psm1
-# Version 1.0 | Formularfelder normalisieren und pruefen.
+# Version 1.1 | Formularfelder normalisieren und pruefen.
 # Zweck  : Felder aus action.json in eine einheitliche Form bringen,
 #          Vorbelegungen bestimmen und Eingaben pruefen. Enthaelt keine
 #          Fensterdarstellung, damit die Regeln ohne WinForms pruefbar bleiben.
@@ -11,7 +11,7 @@ Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot 'SpawnNew.Config.psm1')
 
-$script:FieldTypes = @('text', 'multiline', 'date', 'choice', 'bool')
+$script:FieldTypes = @('text', 'multiline', 'date', 'choice', 'bool', 'file', 'endpoint')
 
 function Get-SpawnNewCheckResult {
     <#
@@ -167,11 +167,38 @@ function Get-SpawnNewFieldDefault {
         return [System.DateTime]::Today.ToString('yyyy-MM-dd')
     }
 
-    if ($Field.Type -eq 'choice' -and $Field.Default.Length -eq 0) {
-        return $Field.Choices[0]
+    if (($Field.Type -eq 'choice' -or $Field.Type -eq 'endpoint') -and $Field.Default.Length -eq 0) {
+        if (@($Field.Choices).Count -eq 0) { return '' }
+        return @($Field.Choices)[0]
     }
 
     return $Field.Default
+}
+
+function Set-SpawnNewEndpointChoice {
+    <#
+    .SYNOPSIS
+    Fuellt Felder vom Typ 'endpoint' mit den konfigurierten KI-Endpunkten.
+    .DESCRIPTION
+    Die Auswahl steht nicht in action.json, sondern in der Konfiguration.
+    Der voreingestellte Endpunkt wird Vorbelegung.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Field,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$Name,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Default
+    )
+
+    foreach ($entry in $Field) {
+        if ($entry.Type -ne 'endpoint') { continue }
+        if (-not $PSCmdlet.ShouldProcess($entry.Name, 'Endpunkte eintragen')) { continue }
+
+        $entry.Choices = $Name
+        if ($entry.Default.Length -eq 0 -or $Name -notcontains $entry.Default) {
+            $entry.Default = if ($Name -contains $Default) { $Default } else { '' }
+        }
+    }
 }
 
 function Test-SpawnNewFieldValue {
@@ -212,12 +239,23 @@ function Test-SpawnNewFieldValue {
             }
             return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): kein gültiges Datum." -Value $text)
         }
-        'choice' {
+        { $_ -eq 'choice' -or $_ -eq 'endpoint' } {
             if ($Field.Choices -contains $text) {
                 return (Get-SpawnNewCheckResult -Valid $true -Message '' -Value $text)
             }
+            if (@($Field.Choices).Count -eq 0) {
+                return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): es ist kein KI-Endpunkt konfiguriert." -Value $text)
+            }
             $list = $Field.Choices -join ', '
             return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): nur $list möglich." -Value $text)
+        }
+        'file' {
+            $full = $text
+            try { $full = [System.IO.Path]::GetFullPath($text) } catch { $full = $text }
+            if ([System.IO.Path]::IsPathRooted($text) -and [System.IO.File]::Exists($full)) {
+                return (Get-SpawnNewCheckResult -Valid $true -Message '' -Value $full)
+            }
+            return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): die Datei ist nicht vorhanden." -Value $text)
         }
     }
 
@@ -260,4 +298,4 @@ function Test-SpawnNewFieldValueSet {
     }
 }
 
-Export-ModuleMember -Function Get-SpawnNewCheckResult, Get-SpawnNewStringOrDefault, Get-SpawnNewBoolOrDefault, ConvertTo-SpawnNewField, Get-SpawnNewFieldList, Get-SpawnNewFieldDefault, Test-SpawnNewFieldValue, Test-SpawnNewFieldValueSet
+Export-ModuleMember -Function Get-SpawnNewCheckResult, Get-SpawnNewStringOrDefault, Get-SpawnNewBoolOrDefault, ConvertTo-SpawnNewField, Get-SpawnNewFieldList, Get-SpawnNewFieldDefault, Set-SpawnNewEndpointChoice, Test-SpawnNewFieldValue, Test-SpawnNewFieldValueSet

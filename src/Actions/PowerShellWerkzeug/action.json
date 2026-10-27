@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.pstool",
+  "title": "PowerShell-Werkzeug",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "fields": [
+    { "name": "name", "label": "Skriptname", "type": "text", "required": true, "pattern": "^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$", "message": "Skriptname: Buchstaben, Ziffern und Bindestriche, etwa Get-Inventar." },
+    { "name": "beschreibung", "label": "Beschreibung", "type": "multiline", "required": true },
+    { "name": "konfiguration", "label": "Konfigurationsdatei anlegen", "type": "bool", "default": "true" }
+  ],
+  "plannedSteps": [
+    "Zielordner mit dem Skriptnamen anlegen",
+    "Skript mit Dateiname und Version im Kopf anlegen",
+    "Optional: JSON-Konfiguration neben dem Skript anlegen",
+    "README.md mit Aufruf und Parametern anlegen"
+  ]
+}

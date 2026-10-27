@@ -10,12 +10,13 @@
   "targetKind": "folder",
   "fields": [
     { "name": "name", "label": "Name", "type": "text", "required": true },
-    { "name": "vorlage", "label": "Strukturvorlage", "type": "choice", "choices": [ "Projekt", "Unterricht", "Minimal" ], "default": "Projekt" },
+    { "name": "vorlage", "label": "Strukturvorlage", "type": "choice", "choices": [ "Projekt", "Projekt mit vertraulichem Ordner", "Unterricht", "Minimal" ], "default": "Projekt" },
     { "name": "zweck", "label": "Zweck (fuer README)", "type": "text", "required": false }
   ],
   "plannedSteps": [
     "Zielordner anlegen",
     "Unterordner der gewaehlten Strukturvorlage anlegen",
+    "Deklarierte NTFS-Rechte der Vorlage setzen, etwa fuer einen vertraulichen Ordner",
     "README.md mit Name, Zweck und Datum anlegen"
   ]
 }

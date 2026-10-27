@@ -72,15 +72,15 @@ Add-SpawnNewTest 'Befehl uebergibt Skript, Aktions-ID und Explorer-Pfad in Anfue
     Confirm-SpawnNewMatch -Label 'Explorer-Pfad' -Actual $command -Pattern '-ExplorerPath "%V"$'
 }
 
-Add-SpawnNewTest 'Reihenfolge der Aktionen bleibt durch den Zahlenpraefix erhalten' {
+Add-SpawnNewTest 'Aktionen stehen nach Titel sortiert, der Zahlenpraefix haelt die Reihenfolge' {
     $actions = @(
         (Get-TestAction -Id 'spawnnew.zebra' -Title 'Zebra'),
         (Get-TestAction -Id 'spawnnew.alpha' -Title 'Alpha')
     )
     $entries = Get-TestEntry -Action $actions
 
-    Confirm-SpawnNewMatch -Label 'erste' -Actual $entries[2].Path -Pattern '01_spawnnew\.zebra$'
-    Confirm-SpawnNewMatch -Label 'zweite' -Actual $entries[4].Path -Pattern '02_spawnnew\.alpha$'
+    Confirm-SpawnNewMatch -Label 'erste' -Actual $entries[2].Path -Pattern '01_spawnnew\.alpha$'
+    Confirm-SpawnNewMatch -Label 'zweite' -Actual $entries[4].Path -Pattern '02_spawnnew\.zebra$'
 }
 
 Add-SpawnNewTest 'Automatisch erzeugte ID ergibt einen zulaessigen Schluesselnamen' {
@@ -93,4 +93,50 @@ Add-SpawnNewTest 'Die Aktions-ID selbst bleibt im Befehl unveraendert' {
     $entries = Get-TestEntry -Action @((Get-TestAction -Id 'auto:4d5d771484317363' -Title 'Mein Werkzeug'))
 
     Confirm-SpawnNewMatch -Label 'ID im Befehl' -Actual $entries[3].Value -Pattern '-ActionId "auto:4d5d771484317363"'
+}
+
+Add-SpawnNewTest 'Verwaltungsbefehle folgen mit Trennlinie auf die Aktionen' {
+    $root = 'HKCU:\Software\Classes'
+    $command = @(Get-SpawnNewMenuCommand -Config ([pscustomobject]@{ Install = 'x'; Update = 'y' }))
+    $entries = @(Get-SpawnNewRegistryEntry -Action @([pscustomobject]@{ Id = 'spawnnew.a'; Title = 'A' }) -AppDirectory 'C:\App' -Root $root -Command $command)
+
+    $titles = @($entries | Where-Object { $_.Name -eq 'MUIVerb' } | ForEach-Object { $_.Value })
+    Confirm-SpawnNewValue -Label 'Reihenfolge' -Actual ($titles -join '|') -Expected 'SpawnNew|A|SpawnNew konfigurieren|SpawnNew aktualisieren|SpawnNew installieren'
+
+    $flags = @($entries | Where-Object { $_.Kind -eq 'dword' })
+    Confirm-SpawnNewValue -Label 'eine Trennlinie' -Actual $flags.Count -Expected 1
+    Confirm-SpawnNewMatch -Label 'vor Konfigurieren' -Actual $flags[0].Path -Pattern 'zz1_spawnnew\.configure$'
+
+    $line = ($entries | Where-Object { $_.Path -match 'zz2_spawnnew\.update\\command$' }).Value
+    Confirm-SpawnNewMatch -Label 'Befehl' -Actual $line -Pattern '"C:\\App\\SpawnNew\.Command\.ps1" -Command update$'
+}
+
+Add-SpawnNewTest 'Ohne Einzeiler gibt es nur Konfigurieren' {
+    $command = @(Get-SpawnNewMenuCommand -Config ([pscustomobject]@{ Install = $null; Update = $null }))
+    Confirm-SpawnNewValue -Label 'Befehle' -Actual (($command | ForEach-Object { $_.Name }) -join ',') -Expected 'configure'
+}
+
+Add-SpawnNewTest 'Installationsumfang folgt aus dem Programmverzeichnis' {
+    Confirm-SpawnNewValue -Label 'Benutzer' -Actual (Get-SpawnNewInstallScope -AppDirectory (Join-Path $env:LOCALAPPDATA 'SpawnNew\App')) -Expected 'CurrentUser'
+    Confirm-SpawnNewValue -Label 'System' -Actual (Get-SpawnNewInstallScope -AppDirectory 'C:\Program Files\SpawnNew\App') -Expected 'AllUsers'
+}
+
+Add-SpawnNewTest 'Abgleich schreibt nur bei Abweichung und entfernt Altlasten' {
+    $root = 'HKCU:\Software\SpawnNewTest\' + [guid]::NewGuid().ToString('N')
+    try {
+        $one = @(Get-SpawnNewRegistryEntry -Action @([pscustomobject]@{ Id = 'spawnnew.a'; Title = 'A' }) -AppDirectory 'C:\App' -Root $root -Command @(Get-SpawnNewMenuCommand -Config ([pscustomobject]@{ Install = $null; Update = $null })))
+
+        Confirm-SpawnNewValue -Label 'erst schreiben' -Actual (Sync-SpawnNewRegistration -Entry $one -Root $root) -Expected $true
+        Confirm-SpawnNewValue -Label 'dann aktuell' -Actual (Sync-SpawnNewRegistration -Entry $one -Root $root) -Expected $false
+        Confirm-SpawnNewValue -Label 'Trennlinie gesetzt' -Actual ((Get-Item -LiteralPath ((Get-SpawnNewMenuKey -Root $root) + '\shell\zz1_spawnnew.configure')).GetValue('CommandFlags')) -Expected 32
+
+        $two = @(Get-SpawnNewRegistryEntry -Action @([pscustomobject]@{ Id = 'spawnnew.b'; Title = 'B' }) -AppDirectory 'C:\App' -Root $root)
+        Confirm-SpawnNewValue -Label 'Abweichung' -Actual (Sync-SpawnNewRegistration -Entry $two -Root $root) -Expected $true
+
+        $keys = @(Get-ChildItem -LiteralPath ((Get-SpawnNewMenuKey -Root $root) + '\shell') | ForEach-Object { $_.PSChildName })
+        Confirm-SpawnNewValue -Label 'nur neue Eintraege' -Actual ($keys -join ',') -Expected '01_spawnnew.b'
+    }
+    finally {
+        Remove-Item -LiteralPath (Split-Path -Parent $root) -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }

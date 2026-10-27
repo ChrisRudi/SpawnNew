@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.customaction",
+  "title": "Eigene Aktion",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": false,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "defaultTarget": "%LOCALAPPDATA%\\SpawnNew\\Actions",
+  "fields": [
+    { "name": "name", "label": "Menuename", "type": "text", "required": true },
+    { "name": "id", "label": "Aktions-ID", "type": "text", "required": true, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$", "message": "Aktions-ID: 3 bis 64 Zeichen aus Buchstaben, Ziffern, Punkt, Strich und Unterstrich, etwa eigen.notiz.", "default": "eigen." },
+    { "name": "beschreibung", "label": "Beschreibung", "type": "text", "required": false }
+  ],
+  "plannedSteps": [
+    "Aktionsordner im persoenlichen Aktionsverzeichnis anlegen",
+    "action.json mit Aktions-ID, Menuename und Beispielfeld anlegen",
+    "Invoke-SpawnAction.ps1 als lauffaehiges, kommentiertes Grundgeruest anlegen",
+    "README.md mit Beschreibung des Formats anlegen"
+  ]
+}

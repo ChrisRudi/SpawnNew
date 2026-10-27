@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "spawnnew.structurefromtext",
+  "title": "Ordnerstruktur aus Beschreibung",
+  "category": "",
+  "entryPoint": "Invoke-SpawnAction.ps1",
+  "proposal": "Get-SpawnProposal.ps1",
+  "requiresAdmin": false,
+  "supportsCancel": true,
+  "allowsOverwrite": false,
+  "targetKind": "folder",
+  "fields": [
+    { "name": "name", "label": "Name", "type": "text", "required": true },
+    { "name": "beschreibung", "label": "Beschreibung", "type": "multiline", "required": true }
+  ],
+  "prerequisites": [
+    { "kind": "endpoint", "hint": "Lokales Modell starten oder unter SpawnNew konfigurieren einen Endpunkt eintragen." }
+  ],
+  "plannedSteps": [
+    "Vor der Zusammenfassung: Sprachmodell schlaegt die Ordnerstruktur vor",
+    "Zielordner anlegen",
+    "Die vorgeschlagenen und bestaetigten Unterordner anlegen",
+    "README.md mit Beschreibung und Struktur anlegen"
+  ]
+}

@@ -1,8 +1,9 @@
 ﻿# SpawnNew.Host.ps1
-# Version 1.1 | Ausfuehrungsprozess von SpawnNew.
+# Version 1.2 | Ausfuehrungsprozess von SpawnNew.
 # Zweck  : Eine vom Kontextmenue gewaehlte Aktion abwickeln: nachpruefen,
 #          Voraussetzungen melden, Formular zeigen, Konflikte klaeren,
-#          zusammenfassen, starten, Fortschritt zeigen, Aufraeumen anbieten.
+#          optional einen Vorschlag erzeugen lassen, zusammenfassen,
+#          starten, Fortschritt zeigen, Aufraeumen anbieten.
 # Input  : -ActionId Aktionskennung, -SourcePath Quelle, -ExplorerPath Ordner,
 #          aus dem das Kontextmenue geoeffnet wurde.
 # Output : Keine Ausgabe auf stdout. Protokoll in
@@ -16,10 +17,20 @@ param(
     [Parameter(Mandatory)][string]$ActionId,
     [string]$SourcePath,
     [string]$ExplorerPath = (Get-Location).Path,
-    [string]$AppDirectory = $PSScriptRoot
+    [string]$AppDirectory = ''
 )
 
 $ErrorActionPreference = 'Stop'
+
+# $PSScriptRoot ist in Windows PowerShell 5.1 bei -File mit CmdletBinding in
+# den param()-Vorgaben leer; so startet der Explorer dieses Skript.
+if (-not $AppDirectory) { $AppDirectory = $PSScriptRoot }
+
+# Der Explorer startet den Prozess im angeklickten Ordner. Als aktuelles
+# Verzeichnis wuerde er diesen Ordner gegen Verschieben sperren.
+$neutral = [System.IO.Path]::GetTempPath()
+Set-Location -LiteralPath $neutral
+[System.Environment]::CurrentDirectory = $neutral
 
 # Der Explorer startet diesen Prozess mit verborgenem Fenster. Ohne Protokoll
 # waere jeder Fehler vor dem ersten Fenster unsichtbar.
@@ -78,7 +89,7 @@ Write-SpawnNewHostLog ('--- Start  ActionId=' + $ActionId + '  ExplorerPath=' + 
 Write-SpawnNewHostLog ('    AppDirectory=' + $AppDirectory + '  PowerShell=' + $PSVersionTable.PSVersion.ToString())
 
 try {
-    foreach ($name in @('Config', 'Catalog', 'Resolve', 'Input', 'Target', 'Runner', 'Form', 'Progress')) {
+    foreach ($name in @('Config', 'Catalog', 'Resolve', 'Input', 'Target', 'Runner', 'Register', 'Form', 'Progress')) {
         Import-Module (Join-Path $AppDirectory ('SpawnNew.' + $name + '.psm1')) -ErrorAction Stop
     }
     Write-SpawnNewHostLog '    Module geladen'
@@ -107,6 +118,20 @@ try {
     $catalog = Get-SpawnNewCatalog -Config $config
     Write-SpawnNewHostLog ('    Katalog: ' + @($catalog.Actions).Count + ' Aktion(en)')
 
+    # Bis zur Explorer-Erweiterung steht das Menue fest in der Registrierung.
+    # Weicht es vom Katalog ab, etwa nach einer neuen persoenlichen Aktion,
+    # wird es hier nachgezogen. Nur bei Benutzerinstallation, ohne Rechte.
+    try {
+        if ((Get-SpawnNewInstallScope -AppDirectory $AppDirectory) -eq 'CurrentUser') {
+            $root    = Get-SpawnNewRegistryRoot -Scope 'CurrentUser'
+            $entries = Get-SpawnNewRegistryEntry -Action $catalog.Actions -AppDirectory $AppDirectory -Root $root -Command (Get-SpawnNewMenuCommand -Config $config)
+            if (Sync-SpawnNewRegistration -Entry $entries -Root $root) { Write-SpawnNewHostLog '    Menue neu geschrieben' }
+        }
+    }
+    catch {
+        Write-SpawnNewHostLog ('    Menue nicht abgeglichen: ' + $_.Exception.Message)
+    }
+
     $candidates = @($catalog.Actions | Where-Object { $_.Id -eq $ActionId })
     if ($SourcePath) {
         $key = Get-SpawnNewPathKey -Path $SourcePath
@@ -123,7 +148,7 @@ try {
     }
 
     $action  = $check.Action
-    $missing = @(Get-SpawnNewMissingPrerequisite -Action $action)
+    $missing = @(Get-SpawnNewMissingPrerequisite -Action $action -Config $config)
 
     if ($missing.Count -gt 0) {
         $lines = @('Für diese Aktion fehlen Voraussetzungen:', '')
@@ -132,7 +157,7 @@ try {
             if ($entry.Hint.Length -gt 0) { $line += ' - ' + $entry.Hint }
             $lines += $line
         }
-        $lines += @('', 'SpawnNew installiert nichts selbst.')
+        $lines += @('', 'SpawnNew installiert und richtet nichts selbst ein.')
 
         Exit-SpawnNewHost -Title 'Voraussetzungen fehlen' -Icon 'Warning' -Code 1 -Text ($lines -join "`r`n")
     }
@@ -141,6 +166,10 @@ try {
     $fields      = @(Get-SpawnNewFieldList -Action $action -Diagnostics $diagnostics)
     $targetKind  = Get-SpawnNewTargetKind -Action $action -Diagnostics $diagnostics
     $basePath    = Get-SpawnNewBasePath -Action $action -ExplorerPath $ExplorerPath -AppDirectory $AppDirectory
+
+    $defaultEndpoint = Get-SpawnNewEndpoint -Config $config
+    $defaultName = if ($null -ne $defaultEndpoint) { $defaultEndpoint.Name } else { '' }
+    Set-SpawnNewEndpointChoice -Field $fields -Name ([string[]]@($config.Llm.Endpoints | ForEach-Object { $_.Name })) -Default $defaultName
     Write-SpawnNewHostLog ('    Formular: ' + $fields.Count + ' Feld(er), Zielart ' + $targetKind + ', Basis ' + $basePath)
 
     $form = Show-SpawnNewActionForm -Action $action -Field $fields -BasePath $basePath
@@ -151,10 +180,9 @@ try {
 
     $values = $form.Value
     $name   = ''
-    if ($values.ContainsKey('name')) { $name = [string]$values['name'] }
 
     if ($targetKind -eq 'folder') {
-        $nameCheck = Test-SpawnNewName -Name $name
+        $nameCheck = Test-SpawnNewName -Name (Get-SpawnNewTargetName -Action $action -Value $values)
         if (-not $nameCheck.Valid) {
             Exit-SpawnNewHost -Title 'Name nicht verwendbar' -Icon 'Warning' -Code 1 -Text $nameCheck.Message
         }
@@ -200,7 +228,45 @@ try {
         }
     }
 
+    # KI-Endpunkt: aus einem Auswahlfeld der Aktion, sonst der voreingestellte.
+    $endpointName = ''
+    foreach ($field in $fields) {
+        if ($field.Type -eq 'endpoint' -and $values.ContainsKey($field.Name)) { $endpointName = [string]$values[$field.Name] }
+    }
+    $llm = Get-SpawnNewEndpoint -Config $config -Name $endpointName
+
+    $contextArguments = @{
+        Action         = $action
+        ExplorerPath   = $ExplorerPath
+        TargetPath     = $targetPath
+        TargetExisted  = $targetExisted
+        ConflictPolicy = $conflictPolicy
+        Value          = $values
+        AppDirectory   = $AppDirectory
+        Llm            = $llm
+    }
+
     $summary = Get-SpawnNewSummaryText -Action $action -TargetPath $targetPath -Field $fields -Value $values -ConflictPolicy $conflictPolicy -TargetExisted $targetExisted
+
+    # Vorschlag vor der Zusammenfassung: das Skript darf nichts anlegen, sein
+    # Ergebnis erscheint hier und wird nach "Erstellen" unveraendert genutzt.
+    $proposalFile = ''
+    if ($action.Proposal.Length -gt 0) {
+        $proposalRun = Get-SpawnNewRun
+        [void](Write-SpawnNewContextFile -Run $proposalRun -ProposalFile $proposalRun.ProposalFile @contextArguments)
+        Write-SpawnNewHostLog ('    Vorschlag: ' + $proposalRun.Directory)
+
+        $process  = Invoke-SpawnNewActionProcess -ScriptPath $action.Proposal -ContextFile $proposalRun.ContextFile -RequiresAdmin $false
+        $status   = Invoke-SpawnNewProgressWindow -Run $proposalRun -Action $action -Process $process -AutoClose
+        $proposal = Read-SpawnNewProposal -Path $proposalRun.ProposalFile
+
+        if ($status.Status -ne 'success' -or $null -eq $proposal) {
+            Exit-SpawnNewHost -Title 'Kein Vorschlag' -Icon 'Warning' -Code 1 -Text ('Es liegt kein Vorschlag vor. Es wurde nichts angelegt.' + "`r`n" + (Get-SpawnNewResultReport -Status $status))
+        }
+
+        $proposalFile = $proposalRun.ProposalFile
+        $summary += "`r`n`r`nVorschlag des Modells, angelegt wird erst nach 'Erstellen':`r`n" + $proposal.Text
+    }
 
     if (-not (Show-SpawnNewSummary -Text $summary)) {
         Write-SpawnNewHostLog '    Ende: in der Zusammenfassung abgebrochen'
@@ -208,7 +274,7 @@ try {
     }
 
     $run = Get-SpawnNewRun
-    [void](Write-SpawnNewContextFile -Run $run -Action $action -ExplorerPath $ExplorerPath -TargetPath $targetPath -TargetExisted $targetExisted -ConflictPolicy $conflictPolicy -Value $values)
+    [void](Write-SpawnNewContextFile -Run $run -ProposalFile $proposalFile @contextArguments)
     Write-SpawnNewHostLog ('    Lauf: ' + $run.Directory + ', Ziel ' + $targetPath)
 
     $process = Invoke-SpawnNewActionProcess -ScriptPath $action.EntryPoint -ContextFile $run.ContextFile -RequiresAdmin $action.RequiresAdmin
@@ -239,7 +305,7 @@ try {
 
     if (@('success', 'partial') -contains $status.Status -and (Test-Path -LiteralPath $targetPath -PathType Container)) {
         if (Show-SpawnNewConfirmation -Title 'Zielordner' -Text ("Zielordner jetzt öffnen?`r`n$targetPath")) {
-            Start-Process -FilePath 'explorer.exe' -ArgumentList $targetPath
+            Start-Process -FilePath 'explorer.exe' -ArgumentList ('"' + $targetPath + '"')
         }
     }
 
