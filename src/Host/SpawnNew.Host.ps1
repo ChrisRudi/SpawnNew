@@ -1,11 +1,13 @@
 ﻿# SpawnNew.Host.ps1
-# Version 1.2 | Ausfuehrungsprozess von SpawnNew.
+# Version 1.3 | Ausfuehrungsprozess von SpawnNew.
 # Zweck  : Eine vom Kontextmenue gewaehlte Aktion abwickeln: nachpruefen,
 #          Voraussetzungen melden, Formular zeigen, Konflikte klaeren,
 #          optional einen Vorschlag erzeugen lassen, zusammenfassen,
 #          starten, Fortschritt zeigen, Aufraeumen anbieten.
-# Input  : -ActionId Aktionskennung, -SourcePath Quelle, -ExplorerPath Ordner,
-#          aus dem das Kontextmenue geoeffnet wurde.
+# Input  : -ActionId Aktionskennung, -SourcePath Quelle, -ExplorerPath der
+#          Ordner, in dem oder auf dem das Kontextmenue geoeffnet wurde,
+#          oder -FilePath eine markierte Datei. Bei mehreren markierten
+#          Dateien sammelt der erste Prozess alle Pfade ein.
 # Output : Keine Ausgabe auf stdout. Protokoll in
 #          %LOCALAPPDATA%\SpawnNew\Logs\host.log. Rueckgabewert 0 bei Erfolg
 #          oder bewusstem Abbruch, 1 bei Fehler, 2 bei Teilergebnis, 3 bei
@@ -17,6 +19,7 @@ param(
     [Parameter(Mandatory)][string]$ActionId,
     [string]$SourcePath,
     [string]$ExplorerPath = (Get-Location).Path,
+    [string]$FilePath = '',
     [string]$AppDirectory = ''
 )
 
@@ -89,10 +92,24 @@ Write-SpawnNewHostLog ('--- Start  ActionId=' + $ActionId + '  ExplorerPath=' + 
 Write-SpawnNewHostLog ('    AppDirectory=' + $AppDirectory + '  PowerShell=' + $PSVersionTable.PSVersion.ToString())
 
 try {
-    foreach ($name in @('Config', 'Catalog', 'Resolve', 'Input', 'Target', 'Runner', 'Register', 'Form', 'Progress')) {
+    foreach ($name in @('Config', 'Catalog', 'Resolve', 'Input', 'Target', 'Runner', 'Register', 'Selection', 'Form', 'Progress')) {
         Import-Module (Join-Path $AppDirectory ('SpawnNew.' + $name + '.psm1')) -ErrorAction Stop
     }
     Write-SpawnNewHostLog '    Module geladen'
+
+    # Rechtsklick auf Dateien: der Explorer startet je markierter Datei einen
+    # Prozess. Der erste sammelt alle Pfade ein, die anderen enden hier.
+    $selection = @()
+    if ($FilePath) {
+        $collected = Add-SpawnNewSelection -ActionId $ActionId -Path $FilePath
+        if ($null -eq $collected) {
+            Write-SpawnNewHostLog ('    an laufende Auswahl uebergeben: ' + $FilePath)
+            exit 0
+        }
+        $selection = @($collected)
+        $ExplorerPath = Split-Path -Parent $selection[0]
+        Write-SpawnNewHostLog ('    Auswahl: ' + $selection.Count + ' Datei(en)')
+    }
 
     $exitCodes = @{ success = 0; nochange = 0; cancelled = 0; failed = 1; partial = 2; unknown = 3 }
 
@@ -173,6 +190,19 @@ try {
     $defaultEndpoint = Get-SpawnNewEndpoint -Config $config
     $defaultName = if ($null -ne $defaultEndpoint) { $defaultEndpoint.Name } else { '' }
     Set-SpawnNewEndpointChoice -Field $fields -Name ([string[]]@($config.Llm.Endpoints | ForEach-Object { $_.Name })) -Default $defaultName
+
+    # Markierte Dateien belegen das erste Dateifeld vor.
+    if ($selection.Count -gt 0) {
+        $fileField = @($fields | Where-Object { $_.Type -eq 'file' }) | Select-Object -First 1
+        if ($null -eq $fileField) {
+            Exit-SpawnNewHost -Title 'Keine Dateiaktion' -Icon 'Warning' -Code 1 -Text "Die Aktion '$($action.Title)' hat kein Dateifeld und kann nicht auf markierte Dateien angewendet werden."
+        }
+        if ($fileField.Multiple) { $fileField.Default = $selection -join "`r`n" }
+        else {
+            $fileField.Default = $selection[0]
+            if ($selection.Count -gt 1) { Write-SpawnNewHostLog '    Aktion nimmt nur eine Datei; die erste gilt' }
+        }
+    }
     Write-SpawnNewHostLog ('    Formular: ' + $fields.Count + ' Feld(er), Zielart ' + $targetKind + ', Basis ' + $basePath)
 
     $form = Show-SpawnNewActionForm -Action $action -Field $fields -BasePath $basePath

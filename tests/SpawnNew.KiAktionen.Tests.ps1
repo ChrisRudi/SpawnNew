@@ -156,3 +156,21 @@ Add-SpawnNewTest 'Leerer Ordner wird nicht dokumentiert' {
 
     Confirm-SpawnNewMatch -Label 'Grund' -Actual $run.Result.Error.Reason -Pattern 'leer'
 }
+
+Add-SpawnNewTest 'Mehrere Dateien ergeben je einen Entwurf, unpassende werden uebersprungen' {
+    $Work = Get-SpawnNewTestDirectory
+    $a = Add-SpawnNewTestFile -Path (Join-Path $Work 'Daten\Bericht.txt') -Content 'Erster Bericht'
+    $b = Add-SpawnNewTestFile -Path (Join-Path $Work 'Daten\Notiz.md') -Content 'Zweite Notiz'
+    $c = Join-Path $Work 'Daten\bild.bin'
+    [System.IO.File]::WriteAllBytes($c, [byte[]](0, 1, 2))
+
+    $server = Start-SpawnNewFakeLlm -Reply '- Kernaussage'
+    try { $run = Invoke-SpawnNewTestAction -Folder 'DateiZusammenfassen' -Id 'spawnnew.summarizefile' -Value @{ datei = [string[]]@($a, $c, $b); umfang = 'Kurz'; modell = 'Test' } -TargetPath (Join-Path $Work 'Daten') -TargetExisted $true -Llm (Get-SpawnNewTestEndpoint -Url $server.Url) }
+    finally { Stop-SpawnNewFakeLlm -Server $server }
+
+    Confirm-SpawnNewValue -Label 'Status' -Actual $run.Result.Status -Expected 'partial'
+    Confirm-SpawnNewValue -Label 'zwei Anfragen' -Actual @($server.Requests | Where-Object { $_.Path -like '*chat*' }).Count -Expected 2
+    Confirm-SpawnNewCondition -Label 'Entwurf 1' -Condition (Test-Path -LiteralPath (Join-Path $Work 'Daten\Bericht.Zusammenfassung.Entwurf.md'))
+    Confirm-SpawnNewCondition -Label 'Entwurf 2' -Condition (Test-Path -LiteralPath (Join-Path $Work 'Daten\Notiz.Zusammenfassung.Entwurf.md'))
+    Confirm-SpawnNewMatch -Label 'Warnung' -Actual (@($run.Progress | Where-Object { $_.Type -eq 'warn' })[0].Text) -Pattern 'bild\.bin ist keine Textdatei'
+}

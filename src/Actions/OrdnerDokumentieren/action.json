@@ -8,6 +8,7 @@
   "supportsCancel": true,
   "allowsOverwrite": false,
   "targetKind": "inPlace",
+  "contexts": [ "folder", "background" ],
   "fields": [
     { "name": "zweck", "label": "Zweck, falls bekannt", "type": "text", "required": false },
     { "name": "modell", "label": "Modell", "type": "endpoint", "required": true }

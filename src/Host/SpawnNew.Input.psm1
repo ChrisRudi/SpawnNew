@@ -113,6 +113,7 @@ function ConvertTo-SpawnNewField {
         Required = (Get-SpawnNewBoolOrDefault -InputObject $Entry -Name 'required' -Default $false)
         Default  = (Get-SpawnNewStringOrDefault -InputObject $Entry -Name 'default' -Default '')
         Choices  = $choices
+        Multiple = (Get-SpawnNewBoolOrDefault -InputObject $Entry -Name 'multiple' -Default $false)
         Pattern  = (Get-SpawnNewStringOrDefault -InputObject $Entry -Name 'pattern' -Default '')
         Message  = (Get-SpawnNewStringOrDefault -InputObject $Entry -Name 'message' -Default '')
     }
@@ -250,12 +251,22 @@ function Test-SpawnNewFieldValue {
             return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): nur $list möglich." -Value $text)
         }
         'file' {
-            $full = $text
-            try { $full = [System.IO.Path]::GetFullPath($text) } catch { $full = $text }
-            if ([System.IO.Path]::IsPathRooted($text) -and [System.IO.File]::Exists($full)) {
-                return (Get-SpawnNewCheckResult -Valid $true -Message '' -Value $full)
+            # Mehrere Dateien stehen je Zeile; der Wert wird dann ein Feld.
+            $multiple = (Test-SpawnNewProperty $Field 'Multiple') -and [bool]$Field.Multiple
+            $items = if ($multiple) { @($text -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } else { @($text) }
+            $files = New-Object System.Collections.ArrayList
+
+            foreach ($item in $items) {
+                $full = $item
+                try { $full = [System.IO.Path]::GetFullPath($item) } catch { $full = $item }
+                if (-not ([System.IO.Path]::IsPathRooted($item) -and [System.IO.File]::Exists($full))) {
+                    return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): die Datei ist nicht vorhanden: $item" -Value $text)
+                }
+                [void]$files.Add($full)
             }
-            return (Get-SpawnNewCheckResult -Valid $false -Message "$($Field.Label): die Datei ist nicht vorhanden." -Value $text)
+
+            if ($multiple) { return (Get-SpawnNewCheckResult -Valid $true -Message '' -Value ([string[]]$files.ToArray())) }
+            return (Get-SpawnNewCheckResult -Valid $true -Message '' -Value $files[0])
         }
     }
 

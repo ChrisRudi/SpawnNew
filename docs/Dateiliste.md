@@ -42,6 +42,7 @@ tools/                                  Entwicklungswerkzeuge, nicht Teil der In
 | `SpawnNew.Document.psm1` | Markdown- und `.docx`-Dateien aus Vorlagen mit Platzhaltern, ohne Word-Automatisierung |
 | `SpawnNew.Llm.psm1` | OpenAI-kompatibler Client fuer lokale und Webendpunkte |
 | `SpawnNew.Secret.psm1` | Geheimnisse benutzer- und rechnergebunden speichern und lesen |
+| `SpawnNew.Selection.psm1` | Mehrfachauswahl im Explorer zu einem Lauf zusammenfassen |
 | `SpawnNew.Settings.psm1` | Verwaltungsbefehle ohne Fenster: Uebersicht, Benutzerkonfiguration, Menueabgleich, Einzeiler |
 | `SpawnNew.Action.psm1` | Hilfen fuer Aktionsskripte: Kontext, Fortschritt, Ergebnis, Dateien ohne Ueberschreiben, Dokumente, Entwuerfe |
 | `SpawnNew.Form.psm1` | Eingabeformular, Konfliktfrage, Zusammenfassung und Meldungen als WinForms-Fenster |
@@ -165,6 +166,7 @@ Geheimnisse und eigene Vorlagen den Entwicklerrechner nicht beschreiben.
 | `SpawnNew.EigeneAktion.Tests.ps1` | Aktion 14; das Grundgeruest wird erkannt und laeuft |
 | `SpawnNew.ProjektAbschliessen.Tests.ps1` | Aktion 15 mit Manifest, ZIP, Verschieben und Vorpruefungen |
 | `SpawnNew.KiAktionen.Tests.ps1` | Aktionen 17 bis 19 gegen einen Testserver |
+| `SpawnNew.Selection.Tests.ps1` | Mehrfachauswahl: gleichzeitige Prozesse ergeben genau einen Sammler |
 | `SpawnNew.HostFlow.Tests.ps1` | den Host als Ganzes; nur die Fenster sind durch Stellvertreter ersetzt |
 
 Die Tests laufen unter Windows PowerShell 5.1 auf Windows. Registrierung,
@@ -240,6 +242,7 @@ diese Angaben in `action.json` aus:
 | `allowsOverwrite` | `true`, `false` | `false` | Ueberschreiben darf nach Bestaetigung angeboten werden |
 | `targetKind` | `folder`, `inPlace` | `folder` | `folder` bildet den Zielpfad aus Basisverzeichnis und Ordnername; `inPlace` arbeitet im Basisverzeichnis selbst |
 | `nameTemplate` | Text mit `{{feld}}` | leer | Ordnername aus Feldern, wenn es kein Feld `name` gibt; verbotene Zeichen werden `-` |
+| `contexts` | `background`, `folder`, `file` | `["background"]` | Wo die Aktion erscheint: leerer Bereich eines Ordners, Rechtsklick auf einen Ordner (der wird zum Explorer-Pfad), Rechtsklick auf Dateien (sie belegen das erste Dateifeld vor) |
 | `proposal` | relativer Pfad | leer | Vorschlagsskript, das vor der Zusammenfassung laeuft (`docs/Aktionsvertrag.md` Abschnitt 12) |
 | `secrets` | Liste von Namen | leer | Benoetigte Geheimnisse, nur mit Namen, nie mit Wert; fehlende gelten als fehlende Voraussetzung |
 
@@ -251,7 +254,7 @@ erfolgreich). Diese Pruefung laeuft erst nach Auswahl der Aktion, nie beim
 Oeffnen des Menues.
 
 Feldtypen in `fields`: `text`, `multiline`, `date`, `choice`, `bool`,
-`file` (vorhandene Datei, vollstaendiger Pfad, Auswahl ueber einen
+`file` (vorhandene Datei, vollstaendiger Pfad, mit `"multiple": true` mehrere Dateien je Zeile und als Liste im Kontext, Auswahl ueber einen
 Dateidialog) und `endpoint` (Auswahl unter den konfigurierten KI-Endpunkten,
 vorbelegt mit dem voreingestellten). Ein unbekannter Typ gilt als `text`
 und wird als Diagnose erfasst. Ein Feld ohne `name` und ein `choice`-Feld
@@ -336,6 +339,22 @@ Erste testbare Stufe ohne Compiler, deshalb reine Registrierung statt DLL:
 <Wurzel>\...\SpawnNew\shell\zz<N>_spawnnew.<befehl>\command
     <Standard>   = powershell.exe ... -File "<App>\SpawnNew.Command.ps1" -Command <befehl>
 ```
+
+Aktionen mit `contexts` erscheinen zusaetzlich in eigenen Untermenues:
+
+```
+<Wurzel>\Directory\shell\SpawnNew\shell\<NN>_<id>\command    ... -ExplorerPath "%1"
+<Wurzel>\*\shell\SpawnNew\shell\<NN>_<id>\command            ... -FilePath "%1"
+```
+
+Ein Ort ohne Aktionen bekommt kein Untermenue; die Verwaltungsbefehle stehen
+nur im Hintergrundmenue. Bei mehreren markierten Dateien startet der
+Explorer den Host je Datei (bis 15). `SpawnNew.Selection.psm1` macht daraus
+einen Lauf: der erste Prozess sammelt ueber eine Datei unter
+`<Lokal>\Selection` und einen benannten Mutex alle Pfade ein, bis 0,9 s
+lang keiner mehr dazukommt; die uebrigen Prozesse enden still.
+Geschrieben und gelesen wird ueber die .NET-Registrierungs-API, weil `*`
+im PowerShell-Provider ein Platzhalter ist.
 
 Anzeigetexte stehen in `MUIVerb`, also in benannten Werten. Unbenannter
 Standardwert ist nur die Befehlszeile. `New-ItemProperty -Name '(default)'`

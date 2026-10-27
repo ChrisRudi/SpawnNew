@@ -106,6 +106,12 @@ function Get-SpawnNewFieldControl {
             $control = New-Object System.Windows.Forms.TextBox
             $control.Text  = $default
             $control.Width = $script:ControlWidth - 90
+            if ((@($Field.PSObject.Properties.Name) -contains 'Multiple') -and $Field.Multiple) {
+                $control.Multiline  = $true
+                $control.ScrollBars = 'Vertical'
+                $control.WordWrap   = $false
+                $control.Height     = 80
+            }
         }
         default {
             $control = New-Object System.Windows.Forms.TextBox
@@ -196,11 +202,13 @@ function Show-SpawnNewActionForm {
             $pick.Top   = $rows - 1
             $pick.Width = 82
             $box = $control
+            $many = $control.Multiline
             $onPick = {
                 $dialog = New-Object System.Windows.Forms.OpenFileDialog
                 $dialog.InitialDirectory = $pathBox.Text
+                $dialog.Multiselect = $many
                 $dialog.Filter = 'Textdateien|*.txt;*.md;*.log;*.csv;*.json;*.xml;*.ps1;*.psm1;*.cs;*.py;*.js;*.ts;*.ini;*.cfg;*.yaml;*.yml|Alle Dateien|*.*'
-                if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $box.Text = $dialog.FileName }
+                if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $box.Text = ($dialog.FileNames -join "`r`n") }
                 $dialog.Dispose()
             }
             $pick.Add_Click($onPick.GetNewClosure())

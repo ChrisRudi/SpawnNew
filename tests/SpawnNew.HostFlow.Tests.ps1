@@ -66,10 +66,10 @@ function Initialize-TestInstallation {
 }
 
 function Invoke-TestHost {
-    param([string]$App, [string]$ActionId, [hashtable]$Values, [bool]$Summary = $true, [string]$Conflict = 'cancel')
+    param([string]$App, [string]$ActionId, [hashtable]$Values, [bool]$Summary = $true, [string]$Conflict = 'cancel', [string]$ExplorerPath = '')
 
     $Work = Get-SpawnNewTestDirectory
-    $base = Join-Path $Work 'Basis'
+    $base = if ($ExplorerPath) { $ExplorerPath } else { Join-Path $Work 'Basis' }
     [void](New-Item -ItemType Directory -Path $base -Force)
     $plan = Add-SpawnNewTestFile -Path (Join-Path $Work 'plan.json') -Content (ConvertTo-Json -InputObject ([pscustomobject]@{ values = [pscustomobject]$Values; summary = $Summary; conflict = $Conflict }) -Depth 4)
     $log = Join-Path $Work 'events.jsonl'
@@ -208,4 +208,51 @@ Add-SpawnNewTest 'Unbekannte Aktion meldet sich verstaendlich' {
 
     Confirm-SpawnNewValue -Label 'Rueckgabewert' -Actual $run.ExitCode -Expected 1
     Confirm-SpawnNewMatch -Label 'Meldung' -Actual (Get-EventText -Run $run -Kind 'message') -Pattern 'nicht mehr vorhanden'
+}
+
+function Invoke-TestHostProcess {
+    # Startet den Host wie ein Rechtsklick auf eine Datei: -FilePath "%1".
+    param([string]$App, [string]$ActionId, [string]$File)
+    $shell = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    $arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $App 'SpawnNew.Host.ps1') + '" -ActionId ' + $ActionId + ' -FilePath "' + $File + '"'
+    return (Start-Process -FilePath $shell -ArgumentList $arguments -PassThru -WindowStyle Hidden)
+}
+
+Add-SpawnNewTest 'Rechtsklick auf mehrere Dateien ergibt ein Formular fuer alle' {
+    $server = Start-SpawnNewFakeLlm -Reply '- Inhalt'
+    $Work = Get-SpawnNewTestDirectory
+    try {
+        $app = Initialize-TestInstallation -LlmUrl $server.Url
+        $a = Add-SpawnNewTestFile -Path (Join-Path $Work 'Markiert\Eins.txt') -Content 'Text eins'
+        $b = Add-SpawnNewTestFile -Path (Join-Path $Work 'Markiert\Zwei.txt') -Content 'Text zwei'
+        $plan = Add-SpawnNewTestFile -Path (Join-Path $Work 'plan.json') -Content '{ "values": { "umfang": "Kurz" }, "summary": true, "conflict": "cancel" }'
+        $env:SPAWNNEW_TEST_PLAN = $plan
+        $env:SPAWNNEW_TEST_LOG = Join-Path $Work 'events.jsonl'
+        try {
+            $processes = @((Invoke-TestHostProcess -App $app -ActionId 'spawnnew.summarizefile' -File $a), (Invoke-TestHostProcess -App $app -ActionId 'spawnnew.summarizefile' -File $b))
+            foreach ($process in $processes) {
+                if (-not $process.WaitForExit(90000)) { Stop-Process -Id $process.Id -Force; throw 'Host haengt.' }
+            }
+        }
+        finally { Remove-Item Env:\SPAWNNEW_TEST_PLAN, Env:\SPAWNNEW_TEST_LOG -ErrorAction SilentlyContinue }
+    }
+    finally { Stop-SpawnNewFakeLlm -Server $server }
+
+    $events = @([System.IO.File]::ReadAllLines((Join-Path $Work 'events.jsonl')) | Where-Object { $_ } | ForEach-Object { ConvertFrom-Json $_ })
+    Confirm-SpawnNewValue -Label 'ein Formular' -Actual @($events | Where-Object { $_.kind -eq 'form' }).Count -Expected 1
+    $summary = (@($events | Where-Object { $_.kind -eq 'summary' })[0]).text
+    Confirm-SpawnNewMatch -Label 'beide Dateien in der Zusammenfassung' -Actual $summary -Pattern 'Eins\.txt[\s\S]*Zwei\.txt|Zwei\.txt[\s\S]*Eins\.txt'
+    Confirm-SpawnNewCondition -Label 'Entwurf Eins' -Condition (Test-Path -LiteralPath (Join-Path $Work 'Markiert\Eins.Zusammenfassung.Entwurf.md'))
+    Confirm-SpawnNewCondition -Label 'Entwurf Zwei' -Condition (Test-Path -LiteralPath (Join-Path $Work 'Markiert\Zwei.Zusammenfassung.Entwurf.md'))
+}
+
+Add-SpawnNewTest 'Rechtsklick auf einen Ordner arbeitet in diesem Ordner' {
+    $app = Initialize-TestInstallation
+    $Work = Get-SpawnNewTestDirectory
+    $project = Join-Path $Work 'Basis\Altprojekt'
+    [void](Add-SpawnNewTestFile -Path (Join-Path $project 'daten.txt') -Content 'x')
+
+    $run = Invoke-TestHost -App $app -ActionId 'spawnnew.closeout' -Values @{ vermerk = 'fertig' } -ExplorerPath $project
+    Confirm-SpawnNewValue -Label 'Rueckgabewert' -Actual $run.ExitCode -Expected 0
+    Confirm-SpawnNewCondition -Label 'Vermerk im angeklickten Ordner' -Condition (Test-Path -LiteralPath (Join-Path $project 'ABSCHLUSS.md'))
 }

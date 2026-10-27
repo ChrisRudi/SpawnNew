@@ -141,6 +141,26 @@ function Get-SpawnNewStringProperty {
     return $value
 }
 
+function Get-SpawnNewContextList {
+    <#
+    .SYNOPSIS
+    Wo eine Aktion im Explorer erscheint: 'background' (leerer Bereich
+    eines Ordners), 'folder' (Rechtsklick auf einen Ordner), 'file'
+    (Rechtsklick auf Dateien). Vorgabe und Rueckfall ist 'background'.
+    #>
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param([Parameter(Mandatory)][AllowNull()]$Description)
+
+    $known = @('background', 'folder', 'file')
+    $list = @()
+    if (Test-SpawnNewProperty $Description 'contexts') {
+        $list = @($Description.contexts | ForEach-Object { ([string]$_).Trim().ToLowerInvariant() } | Where-Object { $known -contains $_ } | Select-Object -Unique)
+    }
+    if ($list.Count -eq 0) { $list = @('background') }
+    return [string[]]$list
+}
+
 function ConvertTo-SpawnNewActionEntry {
     <#
     .SYNOPSIS
@@ -190,6 +210,7 @@ function ConvertTo-SpawnNewActionEntry {
         DefaultTarget   = (Get-SpawnNewStringProperty -InputObject $Description -Name 'defaultTarget' -Default '')
         TargetKind      = (Get-SpawnNewStringProperty -InputObject $Description -Name 'targetKind' -Default 'folder')
         NameTemplate    = (Get-SpawnNewStringProperty -InputObject $Description -Name 'nameTemplate' -Default '')
+        Contexts        = (Get-SpawnNewContextList -Description $Description)
         Fields          = $fields
         Prerequisites   = $prerequisites
         PlannedSteps    = $plannedSteps
@@ -402,4 +423,4 @@ function Get-SpawnNewSourceScan {
     return [pscustomobject]@{ Reachable = $true; Actions = $actions }
 }
 
-Export-ModuleMember -Function Get-SpawnNewShortHash, Get-SpawnNewAutoActionId, Test-SpawnNewExplicitActionId, Resolve-SpawnNewContainedPath, Read-SpawnNewActionFolder, Get-SpawnNewDirectoryAction, Get-SpawnNewSourceScan
+Export-ModuleMember -Function Get-SpawnNewContextList, Get-SpawnNewShortHash, Get-SpawnNewAutoActionId, Test-SpawnNewExplicitActionId, Resolve-SpawnNewContainedPath, Read-SpawnNewActionFolder, Get-SpawnNewDirectoryAction, Get-SpawnNewSourceScan

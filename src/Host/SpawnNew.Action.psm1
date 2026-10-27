@@ -54,6 +54,21 @@ function Get-SpawnNewActionField {
     return [string]$value
 }
 
+function Get-SpawnNewActionList {
+    <#
+    .SYNOPSIS
+    Formularwert als Liste, etwa mehrere markierte Dateien. Ein einzelner
+    Wert wird eine Liste mit einem Eintrag.
+    #>
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param([Parameter(Mandatory)][string]$Name)
+
+    $fields = $script:Run.Context.fields
+    if ($null -eq $fields -or -not ($fields.PSObject.Properties.Name -contains $Name)) { return [string[]]@() }
+    return [string[]]@($fields.$Name | Where-Object { $null -ne $_ -and ([string]$_).Length -gt 0 } | ForEach-Object { [string]$_ })
+}
+
 function Test-SpawnNewActionFlag {
     <#
     .SYNOPSIS
@@ -397,4 +412,4 @@ function Get-SpawnNewActionFormat {
     return 'markdown'
 }
 
-Export-ModuleMember -Function Initialize-SpawnNewAction, Get-SpawnNewActionField, Test-SpawnNewActionFlag, Write-SpawnNewActionStep, Write-SpawnNewActionNote, Add-SpawnNewActionResource, Test-SpawnNewActionCancel, Complete-SpawnNewAction, Complete-SpawnNewActionCancelled, Complete-SpawnNewActionFailed, New-SpawnNewActionFolder, Test-SpawnNewActionWritable, Write-SpawnNewActionText, New-SpawnNewActionDocument, Get-SpawnNewFreeFilePath, Assert-SpawnNewActionEndpoint, Invoke-SpawnNewActionChat, Write-SpawnNewActionDraft, Get-SpawnNewActionFormat, Expand-SpawnNewPlaceholder, Get-SpawnNewDataDirectory, ConvertFrom-SpawnNewModelJson
+Export-ModuleMember -Function Initialize-SpawnNewAction, Get-SpawnNewActionField, Get-SpawnNewActionList, Test-SpawnNewActionFlag, Write-SpawnNewActionStep, Write-SpawnNewActionNote, Add-SpawnNewActionResource, Test-SpawnNewActionCancel, Complete-SpawnNewAction, Complete-SpawnNewActionCancelled, Complete-SpawnNewActionFailed, New-SpawnNewActionFolder, Test-SpawnNewActionWritable, Write-SpawnNewActionText, New-SpawnNewActionDocument, Get-SpawnNewFreeFilePath, Assert-SpawnNewActionEndpoint, Invoke-SpawnNewActionChat, Write-SpawnNewActionDraft, Get-SpawnNewActionFormat, Expand-SpawnNewPlaceholder, Get-SpawnNewDataDirectory, ConvertFrom-SpawnNewModelJson

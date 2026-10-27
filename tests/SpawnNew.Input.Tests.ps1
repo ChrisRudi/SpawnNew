@@ -190,3 +190,19 @@ Add-SpawnNewTest 'Endpunktfeld wird aus der Konfiguration gefuellt' {
     Confirm-SpawnNewValue -Label 'gueltig' -Actual (Test-SpawnNewFieldValue -Field $fields[0] -Value 'Lokal').Valid -Expected $true
     Confirm-SpawnNewValue -Label 'unbekannt' -Actual (Test-SpawnNewFieldValue -Field $fields[0] -Value 'Andere').Valid -Expected $false
 }
+
+Add-SpawnNewTest 'Dateifeld mit mehreren Dateien liefert eine Liste' {
+    $Work = Get-SpawnNewTestDirectory
+    $a = Add-SpawnNewTestFile -Path (Join-Path $Work 'a.txt') -Content 'x'
+    $b = Add-SpawnNewTestFile -Path (Join-Path $Work 'b c.txt') -Content 'y'
+    $diagnostics = New-Object System.Collections.ArrayList
+    $holder = [pscustomobject]@{ Fields = (ConvertFrom-Json '[ { "name": "datei", "label": "Dateien", "type": "file", "multiple": true } ]'); DescriptionPath = '' }
+    $field = @(Get-SpawnNewFieldList -Action $holder -Diagnostics $diagnostics)[0]
+
+    $check = Test-SpawnNewFieldValue -Field $field -Value ($a + "`r`n`r`n" + $b + "`r`n")
+    Confirm-SpawnNewValue -Label 'gueltig' -Actual $check.Valid -Expected $true
+    Confirm-SpawnNewValue -Label 'Liste' -Actual (@($check.Value) -join '|') -Expected ($a + '|' + $b)
+
+    $bad = Test-SpawnNewFieldValue -Field $field -Value ($a + "`r`n" + (Join-Path $Work 'fehlt.txt'))
+    Confirm-SpawnNewMatch -Label 'fehlende Datei genannt' -Actual $bad.Message -Pattern 'fehlt\.txt'
+}

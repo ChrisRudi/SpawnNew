@@ -8,8 +8,9 @@
   "supportsCancel": true,
   "allowsOverwrite": false,
   "targetKind": "inPlace",
+  "contexts": [ "file", "background" ],
   "fields": [
-    { "name": "datei", "label": "Textdatei", "type": "file", "required": true },
+    { "name": "datei", "label": "Textdateien", "type": "file", "multiple": true, "required": true },
     { "name": "umfang", "label": "Umfang", "type": "choice", "choices": [ "Kurz", "Ausführlich" ], "default": "Kurz" },
     { "name": "modell", "label": "Modell", "type": "endpoint", "required": true }
   ],
@@ -17,8 +18,8 @@
     { "kind": "endpoint", "hint": "Lokales Modell starten oder unter SpawnNew konfigurieren einen Endpunkt eintragen." }
   ],
   "plannedSteps": [
-    "Textdatei lesen; Binaerdateien werden abgewiesen",
+    "Markierte oder gewaehlte Textdateien lesen; Binaerdateien werden uebersprungen",
     "Inhalt an das gewaehlte Sprachmodell senden",
-    "Zusammenfassung als gekennzeichnete Entwurfsdatei <Name>.Zusammenfassung.Entwurf.md neben der Quelle anlegen; nichts wird ueberschrieben"
+    "Je Datei eine gekennzeichnete Entwurfsdatei <Name>.Zusammenfassung.Entwurf.md neben der Quelle anlegen; nichts wird ueberschrieben"
   ]
 }

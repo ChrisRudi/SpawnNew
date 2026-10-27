@@ -219,3 +219,9 @@ Add-SpawnNewTest 'Muster der expliziten Aktions-ID' {
         Confirm-SpawnNewValue -Label ("ID '" + $entry.Id + "'") -Actual (Test-SpawnNewExplicitActionId -Id $entry.Id) -Expected $entry.Ok
     }
 }
+
+Add-SpawnNewTest 'Orte einer Aktion werden gelesen, Unbekanntes faellt weg' {
+    Confirm-SpawnNewValue -Label 'Vorgabe' -Actual ((Get-SpawnNewContextList -Description $null) -join ',') -Expected 'background'
+    Confirm-SpawnNewValue -Label 'gelesen' -Actual ((Get-SpawnNewContextList -Description (ConvertFrom-Json '{ "contexts": [ "File", "folder", "Desktop" ] }')) -join ',') -Expected 'file,folder'
+    Confirm-SpawnNewValue -Label 'nur Unbekanntes' -Actual ((Get-SpawnNewContextList -Description (ConvertFrom-Json '{ "contexts": [ "x" ] }')) -join ',') -Expected 'background'
+}

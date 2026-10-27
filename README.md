@@ -97,21 +97,28 @@ also mit Windows PowerShell 5.1.
 
 | Eintrag | Ergebnis |
 |---|---|
-| Datei zusammenfassen | Zusammenfassung einer Textdatei als Entwurf daneben (KI) |
+| Datei zusammenfassen | je markierter Textdatei eine Zusammenfassung als Entwurf daneben (KI); auch per Rechtsklick auf eine oder mehrere Dateien |
 | Eigene Aktion | Grundgeruest einer neuen Aktion im persoenlichen Aktionsordner |
 | Fehleranalyse | Analysedokument mit Ordnern fuer Logs, Screenshots, Loesungsnachweis |
 | Git-Projekt | lokales Repository mit `.gitignore`, README, optional erstem Commit |
-| Ordner dokumentieren | `README.Entwurf.md` aus Dateiliste und Auszuegen (KI) |
+| Ordner dokumentieren | `README.Entwurf.md` aus Dateiliste und Auszuegen (KI); auch per Rechtsklick auf einen Ordner |
 | Ordnerstruktur | Unterordner nach Vorlage, auch mit NTFS-Rechten |
 | Ordnerstruktur aus Beschreibung | Struktur vom Sprachmodell, angelegt erst nach Bestaetigung (KI) |
 | PowerShell-Werkzeug | Skript mit Kopf, Konfiguration und README |
-| Projekt abschließen | Abschlussvermerk, SHA-256-Manifest, optional ZIP und Archiv |
+| Projekt abschließen | Abschlussvermerk, SHA-256-Manifest, optional ZIP und Archiv; auch per Rechtsklick auf einen Ordner |
 | Sitzung | Tagesordnung, Protokoll, Beschlussliste in Markdown oder Word |
 | Werkstättenprotokoll | Protokollvorlage in Markdown oder Word, Bilder- und Messdatenordner |
 | — | |
 | SpawnNew konfigurieren | Uebersicht, Einstellungen, Geheimnisse, Endpunkttest, Menue neu einlesen |
 | SpawnNew aktualisieren | Einzeiler anzeigen, bestaetigen, ausfuehren, Ergebnis zeigen |
 | SpawnNew installieren | dasselbe mit dem Installationseinzeiler |
+
+Das volle Menue erscheint per Rechtsklick in den leeren Bereich eines Ordners.
+Rechtsklick auf markierte Dateien zeigt unter **SpawnNew** nur **Datei
+zusammenfassen**, Rechtsklick auf einen Ordner **Ordner dokumentieren** und
+**Projekt abschließen**, jeweils fuer genau das Angeklickte. Bei mehreren
+markierten Dateien oeffnet sich ein Formular fuer alle; Windows zeigt einen
+solchen Eintrag fuer hoechstens 15 markierte Dateien.
 
 Jede Aktion zeigt erst ein Formular, dann eine Zusammenfassung mit Ziel,
 Eingaben und geplanten Schritten; angelegt wird erst nach **Erstellen**.

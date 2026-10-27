@@ -8,6 +8,7 @@
   "supportsCancel": true,
   "allowsOverwrite": false,
   "targetKind": "inPlace",
+  "contexts": [ "folder", "background" ],
   "fields": [
     { "name": "vermerk", "label": "Abschlussvermerk", "type": "multiline", "required": false },
     { "name": "zip", "label": "ZIP-Archiv erstellen", "type": "bool", "default": "false" },

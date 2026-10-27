@@ -354,6 +354,7 @@ function Get-SpawnNewSummaryText {
         if ($Value.ContainsKey($entry.Name)) {
             $raw = $Value[$entry.Name]
             if ($raw -is [bool]) { $shown = if ($raw) { 'Ja' } else { 'Nein' } }
+            elseif ($raw -is [array]) { $shown = (@($raw) -join "`r`n" + (' ' * ($entry.Label.Length + 4))) }
             else { $shown = [string]$raw }
         }
         if ($shown.Length -eq 0) { $shown = '(leer)' }

@@ -67,7 +67,7 @@ gelesen.
 | `llm` | Gewaehlter KI-Endpunkt oder `null`. `secret` ist nur der Name des Geheimnisses, nie der Wert |
 | `culture` | Kultur des Ausfuehrungsprozesses, etwa `de-DE` |
 
-Fuer `targetKind: folder` steht der Ordnername immer unter `fields.name`,
+Ein Dateifeld mit `"multiple": true` steht in `fields` als Liste von Pfaden, auch bei nur einer Datei; `Get-SpawnNewActionList` liest es. Fuer `targetKind: folder` steht der Ordnername immer unter `fields.name`,
 auch wenn er aus `nameTemplate` gebildet wurde.
 
 `targetPath` entsteht je nach `targetKind` der Aktion: bei `folder` aus dem

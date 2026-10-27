@@ -166,3 +166,60 @@ Add-SpawnNewTest 'Registriertes Programmverzeichnis wird aus der Registrierung g
         Remove-Item -LiteralPath (Split-Path -Parent $root) -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+Add-SpawnNewTest 'Aktionen erscheinen an ihren Orten, Verwaltung nur im Hintergrund' {
+    $root = 'HKCU:\Software\Classes'
+    $actions = @(
+        [pscustomobject]@{ Id = 'spawnnew.summarizefile'; Title = 'Datei zusammenfassen'; Contexts = @('file', 'background') },
+        [pscustomobject]@{ Id = 'spawnnew.closeout'; Title = 'Projekt abschließen'; Contexts = @('folder', 'background') },
+        [pscustomobject]@{ Id = 'spawnnew.pstool'; Title = 'PowerShell-Werkzeug' }
+    )
+    $entries = @(Get-SpawnNewRegistryEntry -Action $actions -AppDirectory 'C:\App' -Root $root -Command @([pscustomobject]@{ Name = 'configure'; Title = 'SpawnNew konfigurieren' }))
+
+    $file = @($entries | Where-Object { $_.Path -like 'HKCU:\Software\Classes\`*\shell\SpawnNew\shell\*\command' })
+    Confirm-SpawnNewValue -Label 'Dateimenue' -Actual $file.Count -Expected 1
+    Confirm-SpawnNewMatch -Label 'Datei als %1' -Actual $file[0].Value -Pattern '-ActionId "spawnnew\.summarizefile" -FilePath "%1"$'
+
+    $folder = @($entries | Where-Object { $_.Path -like '*\Directory\shell\SpawnNew\shell\*\command' })
+    Confirm-SpawnNewValue -Label 'Ordnermenue' -Actual $folder.Count -Expected 1
+    Confirm-SpawnNewMatch -Label 'Ordner als %1' -Actual $folder[0].Value -Pattern '-ExplorerPath "%1"$'
+
+    $background = @($entries | Where-Object { $_.Path -like '*\Directory\Background\shell\SpawnNew\shell\*\command' })
+    Confirm-SpawnNewValue -Label 'Hintergrund: drei Aktionen und Konfigurieren' -Actual $background.Count -Expected 4
+    Confirm-SpawnNewCondition -Label 'Verwaltung nicht im Dateimenue' -Condition (@($entries | Where-Object { $_.Path -like '*`**zz1_*' }).Count -eq 0)
+}
+
+Add-SpawnNewTest 'Ohne Datei- und Ordneraktionen gibt es nur das Hintergrundmenue' {
+    $entries = @(Get-SpawnNewRegistryEntry -Action @([pscustomobject]@{ Id = 'spawnnew.a'; Title = 'A' }) -AppDirectory 'C:\App' -Root 'HKCU:\Software\Classes')
+    Confirm-SpawnNewCondition -Label 'nur Hintergrund' -Condition (@($entries | Where-Object { $_.Path -notlike '*\Directory\Background\shell\*' }).Count -eq 0)
+}
+
+Add-SpawnNewTest 'Abgleich schreibt und entfernt alle drei Orte, auch unter dem Sternchen' {
+    $root = 'HKCU:\Software\SpawnNewTest\' + [guid]::NewGuid().ToString('N')
+    try {
+        $actions = @(
+            [pscustomobject]@{ Id = 'spawnnew.f'; Title = 'F'; Contexts = @('file') },
+            [pscustomobject]@{ Id = 'spawnnew.o'; Title = 'O'; Contexts = @('folder', 'background') }
+        )
+        $entries = @(Get-SpawnNewRegistryEntry -Action $actions -AppDirectory 'C:\App' -Root $root)
+
+        Confirm-SpawnNewValue -Label 'geschrieben' -Actual (Sync-SpawnNewRegistration -Entry $entries -Root $root) -Expected $true
+        Confirm-SpawnNewValue -Label 'aktuell' -Actual (Test-SpawnNewRegistration -Entry $entries -Root $root) -Expected $true
+        Confirm-SpawnNewValue -Label 'Dateibefehl' -Actual (Get-SpawnNewRegistryValue -Path ((Get-SpawnNewMenuKey -Root $root -Context 'file') + '\shell\01_spawnnew.f\command') -Name '') -Expected (Get-SpawnNewActionCommand -AppDirectory 'C:\App' -ActionId 'spawnnew.f' -Context 'file')
+        Confirm-SpawnNewValue -Label 'nur ein Sternchen-Schluessel' -Actual ((Get-SpawnNewSubKeyName -Path $root) -join ',') -Expected '*,Directory'
+
+        $fewer = @(Get-SpawnNewRegistryEntry -Action @($actions[1]) -AppDirectory 'C:\App' -Root $root)
+        Confirm-SpawnNewValue -Label 'Abweichung erkannt' -Actual (Test-SpawnNewRegistration -Entry $fewer -Root $root) -Expected $false
+        [void](Sync-SpawnNewRegistration -Entry $fewer -Root $root)
+        Confirm-SpawnNewValue -Label 'Dateimenue entfernt' -Actual (Get-SpawnNewRegistryValue -Path (Get-SpawnNewMenuKey -Root $root -Context 'file') -Name 'MUIVerb') -Expected $null
+
+        Remove-SpawnNewRegistration -Root $root
+        foreach ($context in @('background', 'folder', 'file')) {
+            Confirm-SpawnNewValue -Label ('entfernt ' + $context) -Actual (Get-SpawnNewRegistryValue -Path (Get-SpawnNewMenuKey -Root $root -Context $context) -Name 'MUIVerb') -Expected $null
+        }
+    }
+    finally {
+        $parent = Open-SpawnNewRegistryKey -Path 'HKCU:\Software' -Writable
+        try { if ($parent.GetSubKeyNames() -contains 'SpawnNewTest') { $parent.DeleteSubKeyTree('SpawnNewTest') } } finally { $parent.Dispose() }
+    }
+}
